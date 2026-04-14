@@ -1,16 +1,21 @@
 import express from 'express';
 import cors from 'cors';
 import ngrok from '@ngrok/ngrok';
+import swaggerUi from 'swagger-ui-express';
 import { config, setWebhookUrl, getWebhookUrl } from './config.js';
 import { requireAuth } from './middleware/auth.js';
 import testRoutes from './routes/test.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
 import { startCleanupJob } from './models/session.js';
+import { swaggerSpec } from './swagger.js';
 
 const app = express();
 
 app.use(cors({ origin: config.frontendUrl }));
 app.use(express.json());
+
+// Swagger UI — sem auth
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Rotas protegidas por API Key (quando TESTA_AI_API_KEY está definida)
 app.use('/api/test', requireAuth, testRoutes);
