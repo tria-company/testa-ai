@@ -5,6 +5,8 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   webhookBaseUrl: process.env.WEBHOOK_BASE_URL || null,
   ngrokAuthToken: process.env.NGROK_AUTH_TOKEN || '',
+  apiKey: process.env.TESTA_AI_API_KEY || null,
+  sessionTtlHours: parseInt(process.env.SESSION_TTL_HOURS, 10) || 6,
 };
 
 let _webhookUrl = config.webhookBaseUrl;

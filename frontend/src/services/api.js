@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const API_KEY = import.meta.env.VITE_TESTA_AI_API_KEY || null;
+
 const api = axios.create({
   baseURL: '/api',
+  ...(API_KEY && { headers: { Authorization: `Bearer ${API_KEY}` } }),
 });
 
 export async function startTest(config) {
@@ -10,7 +13,8 @@ export async function startTest(config) {
 }
 
 export function getStatusStreamUrl(sessionId) {
-  return `/api/test/${sessionId}/status`;
+  const base = `/api/test/${sessionId}/status`;
+  return API_KEY ? `${base}?token=${encodeURIComponent(API_KEY)}` : base;
 }
 
 export async function stopTest(sessionId) {

@@ -4,8 +4,17 @@ function getClient(apiKey) {
   return new OpenAI({ apiKey });
 }
 
-export async function analyzePromptAndBuildPersona(apiKey, agentPrompt) {
+export async function analyzePromptAndBuildPersona(apiKey, agentPrompt, customScenario = null) {
   const client = getClient(apiKey);
+
+  const scenarioBlock = customScenario
+    ? `\n\nCENÁRIO DE TESTE CUSTOMIZADO (PRIORIDADE MÁXIMA):
+O cenário abaixo foi definido pelo testador e DEVE guiar a criação da persona. A persona, seu contexto situacional, arco emocional e edge cases devem ser construídos para EXECUTAR este cenário específico:
+---
+${customScenario}
+---
+Adapte TODOS os campos da persona para que a conversa simulada naturalmente explore este cenário.`
+    : '';
 
   const response = await client.chat.completions.create({
     model: 'gpt-4.1-2025-04-14',
@@ -13,7 +22,7 @@ export async function analyzePromptAndBuildPersona(apiKey, agentPrompt) {
     messages: [
       {
         role: 'system',
-        content: `Você é um especialista em QA de agentes conversacionais. Sua tarefa é analisar PROFUNDAMENTE o prompt/instruções do agente e criar uma persona de cliente EXTREMAMENTE REALISTA.
+        content: `Você é um especialista em QA de agentes conversacionais. Sua tarefa é analisar PROFUNDAMENTE o prompt/instruções do agente e criar uma persona de cliente EXTREMAMENTE REALISTA.${scenarioBlock}
 
 PROCESSO DE ANÁLISE:
 1. Identifique o TIPO DE NEGÓCIO (escola, loja, clínica, cobrança, etc.)

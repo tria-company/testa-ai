@@ -1,4 +1,4 @@
-import { createSession, getSession, removeSession } from '../models/session.js';
+import { createSession, getSession, getAllSessions, removeSession } from '../models/session.js';
 import { begin, stopTest as stopConversation } from '../services/conversation.service.js';
 import { initSSE, broadcast } from '../utils/sse.js';
 
@@ -10,6 +10,8 @@ export async function startTest(req, res) {
       agentWhatsappNumber,
       agentPrompt,
       messageCount,
+      customScenario,
+      externalRef,
       evolutionApiUrl,
       evolutionInstanceName,
       evolutionApiKey,
@@ -29,10 +31,24 @@ export async function startTest(req, res) {
       return res.status(400).json({ error: `Campos obrigatorios: ${missing.join(', ')}` });
     }
 
+    // Validação do customScenario (opcional, max 2000 chars)
+    const scenarioValue = customScenario && typeof customScenario === 'string' ? customScenario.trim() : '';
+    if (scenarioValue.length > 2000) {
+      return res.status(400).json({ error: 'customScenario excede o limite de 2000 caracteres.' });
+    }
+
+    // Validação do externalRef (opcional, max 100 chars)
+    const refValue = externalRef && typeof externalRef === 'string' ? externalRef.trim() : '';
+    if (refValue.length > 100) {
+      return res.status(400).json({ error: 'externalRef excede o limite de 100 caracteres.' });
+    }
+
     const session = createSession({
       agentWhatsappNumber,
       agentPrompt,
       messageCount: parseInt(messageCount, 10),
+      customScenario: scenarioValue || null,
+      externalRef: refValue || null,
       evolutionApiUrl: evolutionApiUrl.replace(/\/+$/, ''),
       evolutionInstanceName,
       evolutionApiKey,
@@ -45,7 +61,7 @@ export async function startTest(req, res) {
       broadcast(session, 'error', { message: err.message });
     });
 
-    return res.status(202).json({ sessionId: session.id });
+    return res.status(202).json({ sessionId: session.id, externalRef: session.config.externalRef || null });
   } catch (err) {
     console.error('Erro ao iniciar teste:', err.message);
     return res.status(400).json({ error: err.message });
@@ -67,6 +83,7 @@ export function streamStatus(req, res) {
     conversation: session.conversation,
     report: session.report,
     messagesRemaining: session.messagesRemaining,
+    externalRef: session.config.externalRef || null,
   })}\n\n`);
 
   req.on('close', () => {
@@ -101,5 +118,29 @@ export function getReport(req, res) {
   if (!session.report) {
     return res.status(404).json({ error: 'Relatório ainda não gerado.' });
   }
-  return res.json(session.report);
+  return res.json({ ...session.report, externalRef: session.config.externalRef || null });
+}
+
+export function listSessions(req, res) {
+  const { status, externalRef } = req.query;
+
+  let list = getAllSessions();
+
+  if (status) {
+    list = list.filter((s) => s.status === status);
+  }
+  if (externalRef) {
+    list = list.filter((s) => s.config.externalRef === externalRef);
+  }
+
+  const sessions = list.map((s) => ({
+    id: s.id,
+    status: s.status,
+    agentNumber: s.config.agentWhatsappNumber,
+    externalRef: s.config.externalRef || null,
+    messagesRemaining: s.messagesRemaining,
+    createdAt: s.createdAt,
+  }));
+
+  return res.json({ sessions, total: sessions.length });
 }

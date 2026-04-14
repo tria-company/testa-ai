@@ -29,7 +29,8 @@ export async function begin(session) {
 
     session.persona = await analyzePromptAndBuildPersona(
       session.config.openaiApiKey,
-      session.config.agentPrompt
+      session.config.agentPrompt,
+      session.config.customScenario
     );
 
     broadcast(session, 'persona', { persona: session.persona });

@@ -2,18 +2,22 @@ import express from 'express';
 import cors from 'cors';
 import ngrok from '@ngrok/ngrok';
 import { config, setWebhookUrl, getWebhookUrl } from './config.js';
+import { requireAuth } from './middleware/auth.js';
 import testRoutes from './routes/test.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import { startCleanupJob } from './models/session.js';
 
 const app = express();
 
 app.use(cors({ origin: config.frontendUrl }));
 app.use(express.json());
 
-app.use('/api/test', testRoutes);
+// Rotas protegidas por API Key (quando TESTA_AI_API_KEY está definida)
+app.use('/api/test', requireAuth, testRoutes);
+// Webhook NÃO protegido — precisa receber webhooks públicos da Evolution
 app.use('/api/webhook', webhookRoutes);
 
-app.get('/api/tunnel', (req, res) => {
+app.get('/api/tunnel', requireAuth, (req, res) => {
   const url = getWebhookUrl();
   res.json({
     url,
@@ -26,6 +30,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.listen(config.port, () => {
   console.log(`TestadorAI Backend rodando na porta ${config.port}`);
+  startCleanupJob();
 
   if (config.webhookBaseUrl) {
     setWebhookUrl(config.webhookBaseUrl);

@@ -9,7 +9,10 @@ export function initSSE(res) {
 }
 
 export function broadcast(session, eventName, data) {
-  const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
+  const enriched = session.config?.externalRef
+    ? { ...data, externalRef: session.config.externalRef }
+    : data;
+  const payload = `event: ${eventName}\ndata: ${JSON.stringify(enriched)}\n\n`;
   session.sseClients = session.sseClients.filter((client) => {
     try {
       client.write(payload);
