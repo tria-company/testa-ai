@@ -16,6 +16,7 @@ export async function startTest(req, res) {
       evolutionInstanceName,
       evolutionApiKey,
       openaiApiKey,
+      caseData,
     } = req.body || {};
 
     const missing = [];
@@ -43,12 +44,41 @@ export async function startTest(req, res) {
       return res.status(400).json({ error: 'externalRef excede o limite de 100 caracteres.' });
     }
 
+    // Validação do caseData (opcional, deve ser um objeto)
+    let caseDataValue = null;
+    let enhancedPrompt = agentPrompt;
+
+    if (caseData) {
+      if (typeof caseData !== 'object' || Array.isArray(caseData)) {
+        return res.status(400).json({ error: 'caseData deve ser um objeto JSON.' });
+      }
+      caseDataValue = caseData;
+
+      // Incorpora dados do caso no prompt (fonte da verdade - agente não deve inventar)
+      const caseDataBlock = `\n\n╔════════════════════════════════════════════════════════════════╗
+║           DADOS OFICIAIS DO CASO (FONTE DA VERDADE)            ║
+║              Não invente, não altere, não adicione             ║
+╚════════════════════════════════════════════════════════════════╝
+${Object.entries(caseDataValue)
+  .map(([key, value]) => `  ${key.padEnd(20)}: ${value}`)
+  .join('\n')}
+╔════════════════════════════════════════════════════════════════╗
+REGRA CRÍTICA: Use EXATAMENTE estes dados. Se o cliente/pessoa
+questionar algo fora destes dados, responda que você não tem
+essa informação disponível ou que precisa verificar.
+Você é responsável por não inventar ou alterar dados.
+╚════════════════════════════════════════════════════════════════╝\n`;
+
+      enhancedPrompt = agentPrompt + caseDataBlock;
+    }
+
     const session = createSession({
       agentWhatsappNumber,
-      agentPrompt,
+      agentPrompt: enhancedPrompt,
       messageCount: parseInt(messageCount, 10),
       customScenario: scenarioValue || null,
       externalRef: refValue || null,
+      caseData: caseDataValue,
       evolutionApiUrl: evolutionApiUrl.replace(/\/+$/, ''),
       evolutionInstanceName,
       evolutionApiKey,

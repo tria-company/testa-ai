@@ -17,7 +17,7 @@ Adapte TODOS os campos da persona para que a conversa simulada naturalmente expl
     : '';
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4.1-2025-04-14',
+    model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [
       {
@@ -158,7 +158,7 @@ Seja SUTIL - um cliente real faria essas perguntas naturalmente, sem parecer que
     .join('\n');
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4.1-2025-04-14',
+    model: 'gpt-4o-mini',
     messages: [
       {
         role: 'system',
