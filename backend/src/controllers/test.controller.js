@@ -26,7 +26,6 @@ export async function startTest(req, res) {
     if (!evolutionApiUrl) missing.push('URL da Evolution API');
     if (!evolutionInstanceName) missing.push('Nome da Instancia');
     if (!evolutionApiKey) missing.push('API Key da Evolution');
-    if (!openaiApiKey) missing.push('API Key da OpenAI');
 
     if (missing.length > 0) {
       return res.status(400).json({ error: `Campos obrigatorios: ${missing.join(', ')}` });
@@ -82,7 +81,7 @@ Você é responsável por não inventar ou alterar dados.
       evolutionApiUrl: evolutionApiUrl.replace(/\/+$/, ''),
       evolutionInstanceName,
       evolutionApiKey,
-      openaiApiKey,
+      openaiApiKey: openaiApiKey || process.env.OPENAI_API_KEY,
     });
 
     begin(session).catch((err) => {
