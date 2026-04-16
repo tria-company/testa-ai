@@ -7,7 +7,6 @@ const initialForm = {
   evolutionApiUrl: '',
   evolutionInstanceName: '',
   evolutionApiKey: '',
-  openaiApiKey: '',
 };
 
 export default function TestForm({ onStart, disabled }) {
@@ -23,7 +22,7 @@ export default function TestForm({ onStart, disabled }) {
     e.preventDefault();
     setError('');
 
-    if (!form.agentWhatsappNumber || !form.agentPrompt || !form.evolutionApiUrl || !form.evolutionInstanceName || !form.evolutionApiKey || !form.openaiApiKey) {
+    if (!form.agentWhatsappNumber || !form.agentPrompt || !form.evolutionApiUrl || !form.evolutionInstanceName || !form.evolutionApiKey) {
       setError('Preencha todos os campos.');
       return;
     }
@@ -119,18 +118,6 @@ export default function TestForm({ onStart, disabled }) {
         </div>
       </div>
 
-      <div className="border-t border-gray-700 pt-4">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">OpenAI</h3>
-        <input
-          type="password"
-          name="openaiApiKey"
-          value={form.openaiApiKey}
-          onChange={handleChange}
-          placeholder="API Key (sk-...)"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={disabled}
-        />
-      </div>
 
       {error && (
         <div className="bg-red-900/30 border border-red-700 rounded-lg px-3 py-2 text-sm text-red-300">
