@@ -14,6 +14,12 @@ const app = express();
 app.use(cors({ origin: config.frontendUrl }));
 app.use(express.json());
 
+// Servir arquivos estáticos do frontend
+app.use(express.static('../frontend/dist'));
+app.get('/', (req, res) => {
+  res.sendFile(new URL('../frontend/dist/index.html', import.meta.url).pathname);
+});
+
 // Swagger UI — sem auth
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
