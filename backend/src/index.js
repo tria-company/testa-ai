@@ -28,7 +28,7 @@ app.use('/api/test', requireAuth, testRoutes);
 // Webhook NÃO protegido — precisa receber webhooks públicos da Evolution
 app.use('/api/webhook', webhookRoutes);
 
-app.get('/api/tunnel', requireAuth, (req, res) => {
+app.get('/api/tunnel', (req, res) => {
   const url = getWebhookUrl();
   res.json({
     url,
