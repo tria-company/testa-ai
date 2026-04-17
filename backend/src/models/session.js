@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config.js';
+import { saveSession } from '../services/database.service.js';
 
 const sessions = new Map();
 // Map<string, Session[]> — múltiplas sessões podem existir para o mesmo número
@@ -42,6 +43,11 @@ export function createSession(configData) {
   }
   existing.push(session);
   sessionsByNumber.set(normalizedNumber, existing);
+
+  // Salvar sessão no banco de dados (async, não bloqueia)
+  saveSession(session).catch((err) => {
+    console.error('[Database] Erro ao salvar sessão no Supabase:', err.message);
+  });
 
   return session;
 }
