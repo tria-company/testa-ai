@@ -10,9 +10,13 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 export async function saveSession(sessionData) {
-  if (!supabase) return null;
+  if (!supabase) {
+    console.error('[Database] SUPABASE NÃO ESTÁ CONFIGURADO!', { supabaseUrl: process.env.SUPABASE_URL?.slice(0, 20), hasKey: !!process.env.SUPABASE_KEY });
+    return null;
+  }
 
   try {
+    console.log('[Database] Salvando sessão:', sessionData.id);
     const { data, error } = await supabase
       .from('testaai_sessions')
       .insert([{
@@ -29,10 +33,11 @@ export async function saveSession(sessionData) {
       .select();
 
     if (error) {
-      console.error('Erro ao salvar sessão:', error);
+      console.error('[Database] Erro ao salvar sessão:', error);
       return null;
     }
 
+    console.log('[Database] Sessão salva com sucesso:', data?.[0]?.id);
     // Salvar configuração de sessão
     await supabase
       .from('testaai_session_configs')
