@@ -1,6 +1,7 @@
 import { configureWebhook, sendTextMessage } from './evolution.service.js';
 import { analyzePromptAndBuildPersona, generateNextMessage } from './openai.service.js';
 import { generate as generateReport } from './report.service.js';
+import { saveMessage, saveResponse, saveReport, updateSessionStatus } from './database.service.js';
 import { broadcast } from '../utils/sse.js';
 import { startTimer, elapsed } from '../utils/timer.js';
 
@@ -73,6 +74,11 @@ async function sendNextMessage(session) {
     session.conversation.push(testerMessage);
     session.messagesRemaining--;
 
+    // Salvar mensagem no banco de dados
+    saveMessage(session.id, 'tester', messageText).catch((err) =>
+      console.error('[Database] Erro ao salvar mensagem:', err.message)
+    );
+
     // Configura pending response
     session.pendingResponse = { sentAt, resolved: false };
 
@@ -141,6 +147,12 @@ export async function handleAgentResponse(session, text) {
   };
   session.conversation.push(agentMessage);
 
+  // Salvar resposta no banco de dados
+  saveResponse(session.id, null, text, {
+    responseTimeMs,
+    model: 'agent',
+  }).catch((err) => console.error('[Database] Erro ao salvar resposta:', err.message));
+
   broadcast(session, 'message', {
     ...agentMessage,
     messagesRemaining: session.messagesRemaining,
@@ -192,6 +204,11 @@ async function finishTest(session) {
     broadcast(session, 'status', { status: session.status, message: 'Gerando relatório...' });
 
     session.report = await generateReport(session);
+
+    // Salvar relatório no banco de dados
+    saveReport(session.id, session.report).catch((err) =>
+      console.error('[Database] Erro ao salvar relatório:', err.message)
+    );
 
     session.status = 'completed';
     broadcast(session, 'status', { status: session.status });
