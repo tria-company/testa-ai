@@ -14,7 +14,7 @@ export async function saveSession(sessionData) {
 
   try {
     const { data, error } = await supabase
-      .from('sessions')
+      .from('testaai_sessions')
       .insert([{
         id: sessionData.id,
         agent_whatsapp_number: sessionData.config.agentWhatsappNumber,
@@ -35,7 +35,7 @@ export async function saveSession(sessionData) {
 
     // Salvar configuração de sessão
     await supabase
-      .from('session_configs')
+      .from('testaai_session_configs')
       .insert([{
         session_id: sessionData.id,
         evolution_api_url: sessionData.config.evolutionApiUrl,
@@ -61,7 +61,7 @@ export async function updateSessionStatus(sessionId, status, data = {}) {
     }
 
     const { data: result, error } = await supabase
-      .from('sessions')
+      .from('testaai_sessions')
       .update(updateData)
       .eq('id', sessionId)
       .select();
@@ -86,7 +86,7 @@ export async function saveMessage(sessionId, sender, content, externalMessageId 
 
   try {
     const { data, error } = await supabase
-      .from('messages')
+      .from('testaai_messages')
       .insert([{
         session_id: sessionId,
         sender,
@@ -123,7 +123,7 @@ export async function saveResponse(sessionId, messageId, responseText, responseM
     } = responseMetadata;
 
     const { data, error } = await supabase
-      .from('responses')
+      .from('testaai_responses')
       .insert([{
         session_id: sessionId,
         message_id: messageId,
@@ -156,7 +156,7 @@ export async function updateSessionPersona(sessionId, persona) {
 
   try {
     const { data, error } = await supabase
-      .from('sessions')
+      .from('testaai_sessions')
       .update({ persona })
       .eq('id', sessionId)
       .select();
@@ -168,7 +168,7 @@ export async function updateSessionPersona(sessionId, persona) {
 
     // Salvar persona na tabela separada também
     await supabase
-      .from('personas')
+      .from('testaai_personas')
       .insert([{
         session_id: sessionId,
         name: persona?.name,
@@ -200,7 +200,7 @@ export async function saveReport(sessionId, report) {
     } = report;
 
     const { data, error } = await supabase
-      .from('reports')
+      .from('testaai_reports')
       .upsert([{
         session_id: sessionId,
         total_messages: totalMessages,
@@ -235,7 +235,7 @@ export async function logSessionEvent(sessionId, eventType, eventData = {}, newS
 
   try {
     const { error } = await supabase
-      .from('session_events')
+      .from('testaai_session_events')
       .insert([{
         session_id: sessionId,
         event_type: eventType,
@@ -256,7 +256,7 @@ export async function logWebhook(sessionId, webhookType, payload, responseStatus
 
   try {
     const { data, err } = await supabase
-      .from('webhook_logs')
+      .from('testaai_webhook_logs')
       .insert([{
         session_id: sessionId,
         webhook_type: webhookType,
@@ -278,7 +278,7 @@ export async function getSessionWithMessages(sessionId) {
 
   try {
     const { data: session, error: sessionError } = await supabase
-      .from('sessions')
+      .from('testaai_sessions')
       .select('*')
       .eq('id', sessionId)
       .single();
@@ -289,7 +289,7 @@ export async function getSessionWithMessages(sessionId) {
     }
 
     const { data: messages, error: messagesError } = await supabase
-      .from('messages')
+      .from('testaai_messages')
       .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
@@ -299,7 +299,7 @@ export async function getSessionWithMessages(sessionId) {
     }
 
     const { data: responses, error: responsesError } = await supabase
-      .from('responses')
+      .from('testaai_responses')
       .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
