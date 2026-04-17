@@ -1,7 +1,7 @@
 import { configureWebhook, sendTextMessage } from './evolution.service.js';
 import { analyzePromptAndBuildPersona, generateNextMessage } from './openai.service.js';
 import { generate as generateReport } from './report.service.js';
-import { saveMessage, saveResponse, saveReport, updateSessionStatus } from './database.service.js';
+import { saveMessage, saveResponse, saveReport } from './database.service.js';
 import { broadcast } from '../utils/sse.js';
 import { startTimer, elapsed } from '../utils/timer.js';
 
@@ -147,11 +147,19 @@ export async function handleAgentResponse(session, text) {
   };
   session.conversation.push(agentMessage);
 
-  // Salvar resposta no banco de dados
-  saveResponse(session.id, null, text, {
-    responseTimeMs,
-    model: 'agent',
-  }).catch((err) => console.error('[Database] Erro ao salvar resposta:', err.message));
+  // Salvar mensagem do agente no banco de dados
+  const savedMessage = await saveMessage(session.id, 'agent', text).catch((err) => {
+    console.error('[Database] Erro ao salvar mensagem do agente:', err.message);
+    return null;
+  });
+
+  // Salvar resposta com referência à mensagem
+  if (savedMessage?.id) {
+    saveResponse(session.id, savedMessage.id, text, {
+      responseTimeMs,
+      model: 'agent',
+    }).catch((err) => console.error('[Database] Erro ao salvar resposta:', err.message));
+  }
 
   broadcast(session, 'message', {
     ...agentMessage,
