@@ -363,7 +363,61 @@ Retorne um JSON com esta estrutura EXATA:
       "suggestion": "Solução CONCRETA e ACIONÁVEL - não sugestões vagas",
       "promptFix": "Se possível, sugira a alteração exata no prompt do agente"
     }
-  ]
+  ],
+  "promptAnalysis": {
+    "overallScore": 0.0,
+    "summary": "Análise GERAL do prompt: está bem estruturado? Tem lacunas? É ambíguo? É longo demais ou curto demais?",
+    "strengths": [
+      "Ponto forte específico do prompt com citação do trecho"
+    ],
+    "weaknesses": [
+      {
+        "section": "Qual parte/seção do prompt",
+        "issue": "Problema específico identificado",
+        "evidence": "Trecho EXATO do prompt que causa o problema",
+        "impact": "Como isso afetou o comportamento do agente na conversa testada",
+        "severity": "critica | alta | media | baixa"
+      }
+    ],
+    "ambiguities": [
+      {
+        "section": "Trecho ambíguo do prompt",
+        "interpretation1": "Uma forma de interpretar",
+        "interpretation2": "Outra forma de interpretar",
+        "recommendation": "Como remover a ambiguidade"
+      }
+    ],
+    "missingInstructions": [
+      {
+        "area": "Área não coberta no prompt (ex: escalação, edge cases, tom)",
+        "whyImportant": "Por que isso deveria estar no prompt",
+        "suggestedAddition": "Texto exato que deveria ser adicionado"
+      }
+    ],
+    "redundancies": [
+      {
+        "section": "Trecho redundante ou repetitivo",
+        "reason": "Por que é redundante",
+        "simplification": "Versão mais limpa"
+      }
+    ],
+    "structuralIssues": "Análise da estrutura: está organizado? Usa seções claras? Tem hierarquia? Usa formatação adequada (listas, negrito, etc)?"
+  },
+  "improvedPrompt": {
+    "version": "2.0",
+    "changelog": [
+      "Resumo da mudança 1 - por que foi feita",
+      "Resumo da mudança 2 - por que foi feita"
+    ],
+    "fullPrompt": "PROMPT COMPLETO MELHORADO - esta é a versão revisada do prompt original, pronta para ser usada em produção. Deve corrigir TODOS os problemas identificados em promptAnalysis. Mantenha as seções úteis do prompt original, mas corrija as falhas. Seja COMPLETO - inclua TUDO que o agente precisa saber, com instruções claras, exemplos, limites e regras de escalação bem definidas. Use formatação markdown para organização (##, **, listas). Este prompt deve estar PRONTO PARA COPIAR E COLAR como substituto do prompt original.",
+    "expectedImprovements": [
+      "Melhoria específica esperada 1 no comportamento do agente",
+      "Melhoria específica esperada 2"
+    ],
+    "testingRecommendations": [
+      "Caso de teste específico para validar a melhoria"
+    ]
+  }
 }
 
 ESCALA DE SCORES - SEJA BRUTAL:
@@ -397,7 +451,55 @@ FLUXO - CADA PASSO CONTA:
 COMPLIANCE DO PROMPT:
 - Verifique CADA regra/proibição mencionada no prompt
 - O agente usou vocabulário proibido? Violou alguma restrição?
-- O agente escalou para humano quando deveria? Ou deixou de escalar?`,
+- O agente escalou para humano quando deveria? Ou deixou de escalar?
+
+===== ANÁLISE PROFUNDA DO PROMPT (OBRIGATÓRIA) =====
+
+Você DEVE analisar o prompt original em profundidade e identificar problemas ESTRUTURAIS que causaram os erros do agente:
+
+1. ESTRUTURA E ORGANIZAÇÃO:
+   - O prompt tem seções claras? (persona, objetivo, regras, exemplos, escalação)
+   - Usa formatação adequada? (markdown, listas, hierarquia)
+   - É fácil de ler e seguir?
+   - Tem tamanho adequado? (nem muito curto, nem exageradamente longo)
+
+2. CLAREZA E AMBIGUIDADE:
+   - Há instruções ambíguas que permitem múltiplas interpretações?
+   - Termos técnicos mal definidos?
+   - Regras contraditórias?
+
+3. COMPLETUDE:
+   - Cobre todos os cenários possíveis? (feliz, triste, confuso, agressivo)
+   - Tem regras de escalação claras? (quando transferir para humano)
+   - Lida com perguntas fora do escopo?
+   - Tem exemplos concretos (few-shot) quando necessário?
+
+4. RESTRIÇÕES E GUARDAS:
+   - Define o que o agente NÃO pode fazer?
+   - Previne alucinações? (ex: "só use informações deste prompt")
+   - Define tom e vocabulário proibido?
+
+5. CONTEXTO E DADOS:
+   - Fornece todas as informações necessárias? (produtos, preços, políticas)
+   - Os dados estão atualizados e completos?
+
+===== GERAÇÃO DO PROMPT MELHORADO =====
+
+Com base na análise acima, você DEVE gerar uma versão MELHORADA do prompt original (campo improvedPrompt.fullPrompt):
+
+REQUISITOS:
+1. Mantenha a essência e objetivo do prompt original
+2. Corrija TODOS os problemas identificados em promptAnalysis.weaknesses
+3. Remova ambiguidades encontradas em promptAnalysis.ambiguities
+4. Adicione instruções faltantes listadas em promptAnalysis.missingInstructions
+5. Elimine redundâncias de promptAnalysis.redundancies
+6. Use formatação markdown clara (##, ###, **, listas numeradas/com bullets)
+7. Organize em seções lógicas: Persona, Objetivo, Regras, Fluxo, Restrições, Escalação, Exemplos
+8. Adicione exemplos few-shot quando útil
+9. Inclua regras anti-alucinação se necessário
+10. Seja ESPECÍFICO - evite instruções vagas
+
+O prompt melhorado deve estar COMPLETO e PRONTO PARA USO. Seria literalmente copiado e colado para substituir o prompt original.`,
       },
       {
         role: 'user',

@@ -17,5 +17,12 @@ export async function generate(session) {
     completedAt: new Date().toISOString(),
   };
 
+  // Inclui o prompt original no relatório para referência e possibilidade de re-execução
+  report.originalPrompt = {
+    fullText: session.config.agentPrompt,
+    charCount: session.config.agentPrompt?.length || 0,
+    wordCount: session.config.agentPrompt?.split(/\s+/).filter(Boolean).length || 0,
+  };
+
   return report;
 }
