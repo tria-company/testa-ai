@@ -74,6 +74,8 @@ async function sendNextMessage(session) {
     session.conversation.push(testerMessage);
     session.messagesRemaining--;
 
+    console.log(`[Conversation] Tester enviou msg ${messageIndex + 1}/${session.config.messageCount} | restantes: ${session.messagesRemaining}`);
+
     // Salvar mensagem no banco de dados
     saveMessage(session.id, 'tester', messageText).catch((err) =>
       console.error('[Database] Erro ao salvar mensagem:', err.message)
@@ -168,10 +170,12 @@ export async function handleAgentResponse(session, text) {
 
   // Continua ou finaliza
   if (session.messagesRemaining > 0) {
+    console.log(`[Conversation] Agente respondeu | restantes: ${session.messagesRemaining} → enviando próxima`);
     const delay = Math.max(MIN_DELAY_BETWEEN_MESSAGES_MS, randomDelay());
     await sleep(delay);
     await sendNextMessage(session);
   } else {
+    console.log(`[Conversation] Agente respondeu | restantes: 0 → finalizando teste`);
     await finishTest(session);
   }
 }
