@@ -4,6 +4,7 @@ import { generate as generateReport } from './report.service.js';
 import { saveMessage, saveResponse, saveReport } from './database.service.js';
 import { broadcast } from '../utils/sse.js';
 import { startTimer, elapsed } from '../utils/timer.js';
+import { retryWithBackoff } from '../utils/retry.js';
 
 const RESPONSE_TIMEOUT_MS = 120000; // 2 minutos
 const MIN_DELAY_BETWEEN_MESSAGES_MS = 2000; // anti-spam
@@ -28,10 +29,13 @@ export async function begin(session) {
     session.status = 'running';
     broadcast(session, 'status', { status: session.status, message: 'Analisando prompt e gerando persona...' });
 
-    session.persona = await analyzePromptAndBuildPersona(
-      session.config.openaiApiKey,
-      session.config.agentPrompt,
-      session.config.customScenario
+    session.persona = await retryWithBackoff(
+      () => analyzePromptAndBuildPersona(
+        session.config.openaiApiKey,
+        session.config.agentPrompt,
+        session.config.customScenario
+      ),
+      { label: `openai.analyzePromptAndBuildPersona[session=${session.id}]` }
     );
 
     broadcast(session, 'persona', { persona: session.persona });
@@ -50,20 +54,26 @@ async function sendNextMessage(session) {
   try {
     const messageIndex = session.config.messageCount - session.messagesRemaining;
 
-    // Gera mensagem via GPT-4.1
-    const messageText = await generateNextMessage(
-      session.config.openaiApiKey,
-      session.persona,
-      session.conversation,
-      messageIndex,
-      session.config.messageCount
+    // Gera mensagem via GPT-4.1 (com retry em erros transitórios)
+    const messageText = await retryWithBackoff(
+      () => generateNextMessage(
+        session.config.openaiApiKey,
+        session.persona,
+        session.conversation,
+        messageIndex,
+        session.config.messageCount
+      ),
+      { label: `openai.generateNextMessage[session=${session.id} msg=${messageIndex + 1}]` }
     );
 
     // Registra timestamp de envio
     const sentAt = startTimer();
 
-    // Envia via Evolution API
-    await sendTextMessage(session, messageText);
+    // Envia via Evolution API (com retry em erros transitórios)
+    await retryWithBackoff(
+      () => sendTextMessage(session, messageText),
+      { label: `evolution.sendTextMessage[session=${session.id} msg=${messageIndex + 1}]` }
+    );
 
     // Registra na conversa
     const testerMessage = {

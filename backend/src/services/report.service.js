@@ -1,11 +1,15 @@
 import { generateReport as generateReportViaAI } from './openai.service.js';
+import { retryWithBackoff } from '../utils/retry.js';
 
 export async function generate(session) {
-  const report = await generateReportViaAI(
-    session.config.openaiApiKey,
-    session.config.agentPrompt,
-    session.persona,
-    session.conversation
+  const report = await retryWithBackoff(
+    () => generateReportViaAI(
+      session.config.openaiApiKey,
+      session.config.agentPrompt,
+      session.persona,
+      session.conversation
+    ),
+    { label: `openai.generateReport[session=${session.id}]` }
   );
 
   report.testMetadata = {
