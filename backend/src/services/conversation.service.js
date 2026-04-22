@@ -69,10 +69,10 @@ async function sendNextMessage(session) {
     // Registra timestamp de envio
     const sentAt = startTimer();
 
-    // Envia via Evolution API (com retry em erros transitórios)
+    // Envia via Evolution API (apenas 1 retry pra mitigar risco de mensagem duplicada no WhatsApp)
     await retryWithBackoff(
       () => sendTextMessage(session, messageText),
-      { label: `evolution.sendTextMessage[session=${session.id} msg=${messageIndex + 1}]` }
+      { retries: 1, label: `evolution.sendTextMessage[session=${session.id} msg=${messageIndex + 1}]` }
     );
 
     // Registra na conversa

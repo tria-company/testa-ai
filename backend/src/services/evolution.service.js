@@ -18,7 +18,11 @@ function evoApi(session) {
       const status = err.response?.status;
       const url = err.config?.url;
       console.error(`Evolution API ERRO [${status}] ${url}:`, JSON.stringify(data, null, 2));
-      throw new Error(`Evolution API [${status}]: ${data?.response?.message || data?.message || data?.error || err.message}`);
+      const wrapped = new Error(`Evolution API [${status}]: ${data?.response?.message || data?.message || data?.error || err.message}`);
+      wrapped.status = status;
+      wrapped.code = err.code;
+      wrapped.cause = err;
+      throw wrapped;
     }
   );
 
