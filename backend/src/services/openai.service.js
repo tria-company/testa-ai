@@ -101,10 +101,24 @@ REGRAS CRÍTICAS:
   return JSON.parse(response.choices[0].message.content);
 }
 
+const SLOW_RESPONSE_THRESHOLD_MS = 240000; // 4 minutos — acima disso o cliente pode reclamar da demora
+
 export async function generateNextMessage(apiKey, persona, conversationHistory, messageIndex, totalMessages) {
   const client = getClient(apiKey);
 
   const progress = messageIndex / totalMessages;
+
+  // Detecta quanto tempo o agente demorou na última resposta (se houver)
+  const lastAgentMsg = [...conversationHistory].reverse().find((m) => m.role === 'agent');
+  const lastAgentResponseMs = lastAgentMsg?.responseTimeMs || 0;
+  const agentWasSlow = lastAgentResponseMs > SLOW_RESPONSE_THRESHOLD_MS;
+  const slowMinutes = agentWasSlow ? Math.floor(lastAgentResponseMs / 60000) : 0;
+
+  const timeBehaviorInstruction = agentWasSlow
+    ? `COMPORTAMENTO QUANTO AO TEMPO DE ESPERA:
+O agente demorou cerca de ${slowMinutes} minuto(s) pra responder sua última mensagem. Isso é MUITO tempo no WhatsApp e um cliente real ficaria impaciente. É NATURAL e ESPERADO que você demonstre incômodo de forma proporcional à sua persona — pode cobrar, pedir agilidade, ou dizer que tá esperando, sem exagerar. Mantenha o tom de pessoa normal, não dramático.`
+    : `COMPORTAMENTO QUANTO AO TEMPO DE ESPERA:
+O agente respondeu num tempo razoável. NÃO reclame da demora, NÃO peça pra responder logo, NÃO diga que está esperando há muito tempo, NÃO ameace procurar outra solução por causa de tempo. Você é um cliente normal numa conversa fluida — o tempo não é um problema aqui.`;
 
   // Monta instruções de memória e armadilhas
   const memorySeedsText = (persona.memorySeeds || [])
@@ -187,6 +201,8 @@ ${phase}
 
 FLUXO ESPERADO DO AGENTE:
 ${(persona.expectedFlow || []).join(' → ')}
+
+${timeBehaviorInstruction}
 
 REGRAS OBRIGATÓRIAS:
 1. Responda SOMENTE com a mensagem do cliente. SEM explicações, SEM meta-texto, SEM aspas ao redor.
