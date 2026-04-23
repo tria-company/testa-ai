@@ -6,7 +6,7 @@ import { broadcast } from '../utils/sse.js';
 import { startTimer, elapsed } from '../utils/timer.js';
 import { retryWithBackoff } from '../utils/retry.js';
 
-const RESPONSE_TIMEOUT_MS = 120000; // 2 minutos
+const RESPONSE_TIMEOUT_MS = 240000; // 4 minutos
 const MIN_DELAY_BETWEEN_MESSAGES_MS = 2000; // anti-spam
 
 function sleep(ms) {
@@ -99,7 +99,7 @@ async function sendNextMessage(session) {
       messagesRemaining: session.messagesRemaining,
     });
 
-    // Timeout de 120s para resposta
+    // Timeout de 4 minutos para resposta
     if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
     session.timeoutTimer = setTimeout(() => {
       handleTimeout(session);
@@ -116,7 +116,7 @@ function handleTimeout(session) {
     // Registra timeout como resposta do agente
     const timeoutMessage = {
       role: 'agent',
-      content: '[TIMEOUT - Agente não respondeu em 120s]',
+      content: '[TIMEOUT - Agente não respondeu em 4 minutos]',
       timestamp: Date.now(),
       responseTimeMs: RESPONSE_TIMEOUT_MS,
       timeout: true,
