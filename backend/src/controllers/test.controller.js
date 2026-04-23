@@ -2,9 +2,26 @@ import { createSession, getSession, getAllSessions, removeSession } from '../mod
 import { begin, stopTest as stopConversation } from '../services/conversation.service.js';
 import { initSSE, broadcast } from '../utils/sse.js';
 
+const SENSITIVE_FIELDS = new Set(['openaiApiKey', 'evolutionApiKey', 'apikey', 'apiKey', 'authorization']);
+
+function redactSecrets(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = Array.isArray(obj) ? [] : {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (SENSITIVE_FIELDS.has(k)) {
+      out[k] = typeof v === 'string' && v.length > 0 ? `***redacted(${v.length})***` : '***redacted***';
+    } else if (v && typeof v === 'object') {
+      out[k] = redactSecrets(v);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 export async function startTest(req, res) {
   try {
-    console.log('POST /api/test/start - body:', JSON.stringify(req.body, null, 2));
+    console.log('POST /api/test/start - body:', JSON.stringify(redactSecrets(req.body), null, 2));
 
     const {
       agentWhatsappNumber,
