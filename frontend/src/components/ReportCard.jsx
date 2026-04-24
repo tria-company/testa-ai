@@ -28,6 +28,37 @@ function VerdictBadge({ verdict }) {
   );
 }
 
+function productionRecommendation(report) {
+  const score = typeof report.overallScore === 'number' ? report.overallScore : parseFloat(report.overallScore);
+  const v = (report.verdict || '').toUpperCase();
+
+  if (v === 'APROVADO' || score >= 7) {
+    return {
+      label: 'Pode usar em produção',
+      status: 'SIM',
+      detail: 'Agente cumpre seu papel com qualidade suficiente para atender clientes reais.',
+      style: 'bg-green-900/30 border-green-600/40 text-green-300',
+      pillStyle: 'bg-green-600 text-white',
+    };
+  }
+  if (v === 'REPROVADO' || score < 5) {
+    return {
+      label: 'Não recomendado para produção',
+      status: 'NÃO',
+      detail: 'Falhas graves comprometem a experiência — corrija os problemas críticos antes de liberar.',
+      style: 'bg-red-900/30 border-red-600/40 text-red-300',
+      pillStyle: 'bg-red-600 text-white',
+    };
+  }
+  return {
+    label: 'Usar em produção somente após ajustes',
+    status: 'COM RESSALVAS',
+    detail: 'Funciona em parte, mas tem problemas que um cliente real perceberia. Aplique as melhorias sugeridas antes.',
+    style: 'bg-yellow-900/30 border-yellow-600/40 text-yellow-200',
+    pillStyle: 'bg-yellow-600 text-white',
+  };
+}
+
 function SeverityBadge({ severity }) {
   if (!severity) return null;
   const s = severity.toLowerCase();
@@ -77,15 +108,33 @@ export default function ReportCard({ report }) {
         {copied ? 'Copiado!' : 'Copiar Relatorio em Markdown'}
       </button>
 
-      {/* Header com nota geral + veredicto */}
-      <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 text-center">
-        <p className="text-sm text-gray-400 mb-2 uppercase tracking-wider">Nota Geral do Agente</p>
-        <div className="flex items-center justify-center gap-4">
-          <ScoreBadge score={report.overallScore} size="lg" />
-          <VerdictBadge verdict={report.verdict} />
-        </div>
-        <p className="text-sm text-gray-300 mt-3 max-w-lg mx-auto">{report.summary}</p>
-      </div>
+      {/* Header com nota geral + veredicto + recomendacao de producao */}
+      {(() => {
+        const prod = productionRecommendation(report);
+        return (
+          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6 text-center">
+            <p className="text-sm text-gray-400 mb-2 uppercase tracking-wider">Nota Geral do Agente</p>
+            <div className="flex items-center justify-center gap-4">
+              <ScoreBadge score={report.overallScore} size="lg" />
+              <VerdictBadge verdict={report.verdict} />
+            </div>
+            <p className="text-2xl font-semibold text-gray-100 mt-4">
+              {typeof report.overallScore === 'number' ? report.overallScore.toFixed(1) : report.overallScore}/10
+            </p>
+
+            <div className={`mt-4 border rounded-lg p-4 ${prod.style}`}>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <span className="text-xs uppercase tracking-wider text-gray-400">Pode usar em produção?</span>
+                <span className={`text-xs font-bold px-2 py-1 rounded ${prod.pillStyle}`}>{prod.status}</span>
+              </div>
+              <p className="text-sm font-medium">{prod.label}</p>
+              <p className="text-xs mt-1 opacity-90">{prod.detail}</p>
+            </div>
+
+            <p className="text-sm text-gray-300 mt-4 max-w-lg mx-auto">{report.summary}</p>
+          </div>
+        );
+      })()}
 
       {/* Aderencia ao Fluxo */}
       <Section title="Aderencia ao Fluxo" score={report.flowAdherence?.score}>
