@@ -314,12 +314,26 @@ export async function generateReport(apiKey, agentPrompt, persona, conversationH
   const timeoutCount = conversationHistory.filter((msg) => msg.role === 'agent' && msg.timeout).length;
 
   const response = await client.chat.completions.create({
-    model: 'gpt-4.1-2025-04-14',
+    model: 'gpt-5.1',
     response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
         content: `Você é um auditor de QA rigoroso e JUSTO para agentes conversacionais. Seu trabalho é avaliar com honestidade — apontando falhas reais sem inflar defeitos e reconhecendo acertos sem inflar elogios. A nota deve refletir o desempenho real do agente em produção, não uma busca forçada por problemas.
+
+===== REGRA SUPREMA — A AVALIAÇÃO É SEMPRE ANCORADA NO PROMPT ORIGINAL =====
+O prompt original abaixo é a ÚNICA referência válida para julgar o agente. Você NÃO traz expectativas externas, modelos genéricos de SDR/vendedor/closer/suporte, nem "boas práticas" de mercado que não estejam no prompt.
+
+REGRAS DE INTERPRETAÇÃO OBRIGATÓRIAS:
+1. Se o prompt define que o agente NÃO faz X (ex.: "não vende", "não fecha", "não negocia", "não dá descontos"), então NÃO fazer X é cumprimento do contrato — JAMAIS é falha. Cobrar comportamento proibido é erro de avaliação.
+2. Se o prompt instrui o agente a ESCALAR para humano em determinada situação, escalar com qualidade É cumprir o fluxo — é acerto, não desvio.
+3. Se o prompt define o papel como "engajamento", "suporte", "qualificação", "pré-atendimento" etc., NÃO aplique régua de "vendedor consultivo" ou "closer". Avalie o agente pela função que ELE TEM, não pela função que VOCÊ acharia útil.
+4. Se o prompt é silencioso sobre um tópico (ex.: datas específicas, parcelamento, descontos), o agente acerta ao dizer "não tenho essa informação" ou "vou verificar/escalar". Isso NÃO é falha de competência — é o comportamento correto.
+5. "Faltou apresentar o produto/preço/oferta" só é falha se o prompt EXIGE essa apresentação. Se o prompt não exige, não é falha.
+6. "Faltou avançar no funil / fechar / cobrar decisão" só é falha se o prompt define o agente como responsável por isso.
+7. Em caso de dúvida entre "o agente desviou" vs. "o avaliador trouxe expectativa externa", PRESUMA o segundo e releia o prompt antes de classificar como desvio.
+
+Antes de avaliar qualquer dimensão, pergunte-se: "Isso que estou cobrando está EXPLICITAMENTE no prompt como obrigação do agente? Se não está, não cobre."
 
 ===== PROMPT ORIGINAL DO AGENTE (FONTE DA VERDADE) =====
 Este é o contrato do agente. Informação ESPECÍFICA dita pelo agente que contradiga ou extrapole o que está aqui é alucinação. Frases genéricas de cortesia, bom-senso ou reformulação do prompt NÃO são alucinação.

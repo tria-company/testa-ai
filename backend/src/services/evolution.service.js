@@ -39,7 +39,7 @@ export async function configureWebhook(session) {
   const webhookUrl = `${baseUrl}/api/webhook/evolution`;
   const { client, instanceName } = evoApi(session);
 
-  // Evolution API v2 - POST /webhook/set/{instance} com wrapper "webhook"
+  // 1. POST /webhook/set/{instance} — aplica config
   await client.post(`/webhook/set/${instanceName}`, {
     webhook: {
       url: webhookUrl,
@@ -50,7 +50,29 @@ export async function configureWebhook(session) {
     },
   });
 
-  console.log(`Webhook configurado: ${webhookUrl}`);
+  // 2. GET /webhook/find/{instance} — verifica que ficou correto
+  let current;
+  try {
+    const found = await client.get(`/webhook/find/${instanceName}`);
+    current = found.data;
+  } catch (err) {
+    throw new Error(`Falha ao verificar webhook da instancia "${instanceName}": ${err.message}`);
+  }
+
+  const actualUrl = current?.url || current?.webhook?.url;
+  const actualEnabled = current?.enabled ?? current?.webhook?.enabled;
+  const actualEvents = current?.events || current?.webhook?.events || [];
+  const hasMessagesUpsert = Array.isArray(actualEvents) && actualEvents.includes('MESSAGES_UPSERT');
+
+  if (actualUrl !== webhookUrl || actualEnabled !== true || !hasMessagesUpsert) {
+    throw new Error(
+      `Webhook da instancia "${instanceName}" nao ficou configurado corretamente. ` +
+      `Esperado: url=${webhookUrl}, enabled=true, events inclui MESSAGES_UPSERT. ` +
+      `Atual: url=${actualUrl}, enabled=${actualEnabled}, events=${JSON.stringify(actualEvents)}`
+    );
+  }
+
+  console.log(`[Webhook] Configurado e validado para instancia "${instanceName}": ${webhookUrl}`);
 }
 
 export async function sendTextMessage(session, text) {
