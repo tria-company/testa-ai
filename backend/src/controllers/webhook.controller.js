@@ -17,9 +17,13 @@ export function handleEvent(req, res) {
   const remoteJid = body.data.key.remoteJid || '';
   const messageId = body.data.key.id;
   const senderNumber = remoteJid.replace(/@.*$/, '');
+  const instanceName = body.instance || body.instanceName || '';
 
-  const session = getSessionByAgentNumber(senderNumber);
-  if (!session) return;
+  const session = getSessionByAgentNumber(senderNumber, instanceName);
+  if (!session) {
+    console.warn(`[Webhook] Sem sessão ativa para agentNumber=${senderNumber} instance=${instanceName}`);
+    return;
+  }
   if (session.status !== 'running') return;
 
   // Deduplicação

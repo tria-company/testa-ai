@@ -3,11 +3,17 @@ import { config } from '../config.js';
 import { saveSession } from '../services/database.service.js';
 
 const sessions = new Map();
-// Map<string, Session[]> — múltiplas sessões podem existir para o mesmo número
-const sessionsByNumber = new Map();
+// Map<string, Session[]> — múltiplas sessões podem existir para a mesma chave (agentNumber + instanceName)
+const sessionsByKey = new Map();
 
 const ACTIVE_STATUSES = new Set(['pending', 'configuring_webhook', 'running', 'generating_report']);
 const TERMINAL_STATUSES = new Set(['completed', 'stopped', 'error']);
+
+function routingKey(agentNumber, instanceName) {
+  const num = (agentNumber || '').replace(/\D/g, '').replace(/@.*$/, '');
+  const inst = (instanceName || '').trim();
+  return `${num}::${inst}`;
+}
 
 export function createSession(configData) {
   const normalizedNumber = configData.agentWhatsappNumber.replace(/\D/g, '');
@@ -35,14 +41,15 @@ export function createSession(configData) {
 
   sessions.set(session.id, session);
 
-  // Adiciona ao array de sessões desse número
-  const existing = sessionsByNumber.get(normalizedNumber) || [];
+  // Adiciona ao array de sessões dessa chave (agentNumber + instanceName)
+  const key = routingKey(normalizedNumber, configData.evolutionInstanceName);
+  const existing = sessionsByKey.get(key) || [];
   const activeCount = existing.filter((s) => ACTIVE_STATUSES.has(s.status)).length;
   if (activeCount > 0) {
-    console.warn(`[Session] Atenção: já existe(m) ${activeCount} sessão(ões) ativa(s) para o número ${normalizedNumber}. Webhook vai rotear para a mais recente.`);
+    console.warn(`[Session] Atenção: já existe(m) ${activeCount} sessão(ões) ativa(s) para ${key}. Webhook vai rotear para a mais recente.`);
   }
   existing.push(session);
-  sessionsByNumber.set(normalizedNumber, existing);
+  sessionsByKey.set(key, existing);
 
   // Salvar sessão no banco de dados (async, não bloqueia)
   saveSession(session).catch((err) => {
@@ -60,9 +67,9 @@ export function getAllSessions() {
   return Array.from(sessions.values());
 }
 
-export function getSessionByAgentNumber(number) {
-  const normalized = number.replace(/\D/g, '').replace(/@.*$/, '');
-  const list = sessionsByNumber.get(normalized);
+export function getSessionByAgentNumber(number, instanceName) {
+  const key = routingKey(number, instanceName);
+  const list = sessionsByKey.get(key);
   if (!list || list.length === 0) return null;
 
   // Roteia para a sessão ativa mais recente (última do array que está ativa)
@@ -77,14 +84,14 @@ export function getSessionByAgentNumber(number) {
 export function removeSession(id) {
   const session = sessions.get(id);
   if (session) {
-    const number = session.config.agentWhatsappNumber;
-    const list = sessionsByNumber.get(number);
+    const key = routingKey(session.config.agentWhatsappNumber, session.config.evolutionInstanceName);
+    const list = sessionsByKey.get(key);
     if (list) {
       const filtered = list.filter((s) => s.id !== id);
       if (filtered.length === 0) {
-        sessionsByNumber.delete(number);
+        sessionsByKey.delete(key);
       } else {
-        sessionsByNumber.set(number, filtered);
+        sessionsByKey.set(key, filtered);
       }
     }
     sessions.delete(id);
