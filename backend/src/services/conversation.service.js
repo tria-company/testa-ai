@@ -29,7 +29,7 @@ export async function begin(session) {
     session.status = 'running';
     broadcast(session, 'status', { status: session.status, message: 'Analisando prompt e gerando persona...' });
 
-    session.persona = await retryWithBackoff(
+    const personaResult = await retryWithBackoff(
       () => analyzePromptAndBuildPersona(
         session.config.openaiApiKey,
         session.config.agentPrompt,
@@ -37,6 +37,31 @@ export async function begin(session) {
       ),
       { label: `openai.analyzePromptAndBuildPersona[session=${session.id}]` }
     );
+
+    // Novo formato retorna estrutura aninhada — mapear para o formato plano esperado por generateNextMessage
+    const p = personaResult.persona || personaResult;
+    const analise = personaResult.analise_do_prompt || {};
+    const cenarios = personaResult.cenarios_de_teste || {};
+
+    session.persona = {
+      ...p,
+      businessType:        analise.businessType        || p.businessType,
+      agentRole:           analise.agentRole           || p.agentRole,
+      expectedFlow:        analise.expectedFlow         || p.expectedFlow        || [],
+      agentLimitations:    analise.agentLimitations     || p.agentLimitations    || [],
+      edgeCases: [
+        ...(cenarios.alucinacao    || []).map((c) => `ALUCINAÇÃO: ${c.pergunta}`),
+        ...(cenarios.limites       || []).map((c) => `LIMITES: ${c.pedido}`),
+        ...(cenarios.fora_de_contexto || []).map((c) => `FORA DE CONTEXTO: ${c.mudanca_de_assunto}`),
+        ...(cenarios.pressao       || []).map((c) => `PRESSÃO: ${c.tatica}`),
+      ],
+      memorySeeds: (cenarios.memoria || []).map((m) => ({
+        info:          m.info_plantada,
+        checkQuestion: m.momento_de_cobranca,
+      })),
+      hallucinationTraps: (cenarios.alucinacao || []).map((c) => c.pergunta),
+      _fullAnalysis: personaResult,
+    };
 
     broadcast(session, 'persona', { persona: session.persona });
 
