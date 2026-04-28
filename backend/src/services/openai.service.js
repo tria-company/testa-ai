@@ -525,11 +525,30 @@ ESCALA DE SCORES — CALIBRAÇÃO JUSTA:
 
 REGRA DE CALIBRAÇÃO: agentes que cumprem o fluxo principal, não alucinam informação específica e respondem no tom certo MERECEM 7-8, mesmo com imperfeições menores. Não puna pequenos deslizes com notas baixas. Por outro lado, falhas reais (alucinação grave, quebra de fluxo, ignorar o cliente) devem puxar a nota pra baixo.
 
-VEREDITO — MAPEAMENTO OBRIGATÓRIO baseado no overallScore:
-- overallScore >= 7.0 → "APROVADO"
-- overallScore >= 5.0 e < 7.0 → "NECESSITA AJUSTES"
-- overallScore < 5.0 → "REPROVADO"
-Siga essa regra estritamente. O verdict DEVE ser coerente com o overallScore.
+VEREDITO — MAPEAMENTO RIGOROSO E CONSERVADOR:
+
+1. APROVADO: overallScore >= 7.0.
+2. NECESSITA AJUSTES: overallScore >= 4.0 e < 7.0, OU overallScore < 4.0 sem nenhuma falha grave concreta da lista abaixo.
+3. REPROVADO: REQUER OBRIGATORIAMENTE as DUAS condições juntas:
+   (a) overallScore < 4.0
+   (b) pelo menos UMA falha grave concreta da lista abaixo, devidamente evidenciada na conversa (com citação da mensagem).
+
+Sem (b), o teto é NECESSITA AJUSTES. Acumular problemas pequenos NÃO é motivo para REPROVADO.
+
+LISTA DE FALHAS GRAVES — basta UMA com evidência clara para habilitar REPROVADO (junto com a nota < 4.0):
+- Alucinação GRAVE ou CRÍTICA recorrente: dados específicos inventados (preço, prazo, política, produto) em MAIS DE UMA mensagem. Alucinação leve/moderada pontual NÃO basta.
+- Violação explícita de proibição do prompt: ex. prompt diz "não oferecer desconto" e o agente ofereceu; "não fechar venda" e o agente fechou; "não dar conselho médico" e deu.
+- Ausência total ou predominante de respostas: timeouts em MAIS DA METADE das mensagens enviadas pelo testador.
+- Falha total de fluxo: agente não cumpre NENHUM dos passos principais definidos no prompt — não se apresenta, não qualifica, não atende, ignora o cliente.
+- Dano real em produção: comportamento que causaria prejuízo concreto ao cliente ou ao negócio se replicado em ambiente real (ex.: conduzir cliente a decisão equivocada com dado inventado, expor informação indevida, descumprir compromisso explícito do prompt de forma a quebrar contrato com cliente).
+
+Quando estiver em dúvida se uma falha é "grave" ou apenas "moderada", PREFIRA classificar como moderada e usar NECESSITA AJUSTES. REPROVADO é uma acusação forte e deve ter evidência inequívoca.
+
+ANTES DE MARCAR REPROVADO, responda dentro do raciocínio:
+- "Qual a falha grave concreta que justifica?" → cite a(s) mensagem(ns) específica(s).
+- "O agente em produção real causaria prejuízo concreto aqui?" → se a resposta é "talvez" ou "depende", NÃO é REPROVADO.
+
+O verdict DEVE ser coerente com o overallScore E com a presença/ausência de falha grave evidenciada.
 
 ALUCINAÇÃO - DEFINIÇÃO RIGOROSA (e o que NÃO conta):
 - CONTA como alucinação: informação ESPECÍFICA (preço, horário, nome próprio, política, desconto, número, endereço) afirmada pelo agente que contradiga ou extrapole o prompt.
