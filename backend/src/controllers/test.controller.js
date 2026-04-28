@@ -1,5 +1,6 @@
 import { createSession, getSession, getAllSessions, removeSession } from '../models/session.js';
 import { begin, stopTest as stopConversation } from '../services/conversation.service.js';
+import { isValidProject, listProjectKeys } from '../services/projects.service.js';
 import { initSSE, broadcast } from '../utils/sse.js';
 
 const SENSITIVE_FIELDS = new Set(['openaiApiKey', 'evolutionApiKey', 'apikey', 'apiKey', 'authorization']);
@@ -34,6 +35,7 @@ export async function startTest(req, res) {
       evolutionApiKey,
       openaiApiKey,
       caseData,
+      project,
     } = req.body || {};
 
     const missing = [];
@@ -58,6 +60,17 @@ export async function startTest(req, res) {
     const refValue = externalRef && typeof externalRef === 'string' ? externalRef.trim() : '';
     if (refValue.length > 100) {
       return res.status(400).json({ error: 'externalRef excede o limite de 100 caracteres.' });
+    }
+
+    // Validação do project (opcional, deve ser uma das chaves conhecidas)
+    let projectValue = null;
+    if (project !== undefined && project !== null && project !== '') {
+      if (!isValidProject(project)) {
+        return res.status(400).json({
+          error: `project inválido. Valores permitidos: ${listProjectKeys().join(', ')}.`,
+        });
+      }
+      projectValue = project;
     }
 
     // Validação do caseData (opcional, deve ser um objeto)
@@ -95,6 +108,7 @@ Você é responsável por não inventar ou alterar dados.
       customScenario: scenarioValue || null,
       externalRef: refValue || null,
       caseData: caseDataValue,
+      project: projectValue,
       evolutionApiUrl: evolutionApiUrl.replace(/\/+$/, ''),
       evolutionInstanceName,
       evolutionApiKey,

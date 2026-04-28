@@ -1,7 +1,8 @@
-import { configureWebhook, sendTextMessage } from './evolution.service.js';
+import { configureWebhook, sendTextMessage, getInstanceOwnerNumber } from './evolution.service.js';
 import { analyzePromptAndBuildPersona, generateNextMessage } from './openai.service.js';
 import { generate as generateReport } from './report.service.js';
 import { saveMessage, saveResponse, saveReport } from './database.service.js';
+import { cleanupTestLead, isValidProject } from './projects.service.js';
 import { broadcast } from '../utils/sse.js';
 import { startTimer, elapsed } from '../utils/timer.js';
 import { retryWithBackoff } from '../utils/retry.js';
@@ -71,6 +72,7 @@ export async function begin(session) {
     session.status = 'error';
     session.error = err.message;
     broadcast(session, 'error', { message: err.message });
+    runProjectCleanup(session);
     throw err;
   }
 }
@@ -133,6 +135,7 @@ async function sendNextMessage(session) {
     session.status = 'error';
     session.error = err.message;
     broadcast(session, 'error', { message: `Erro ao enviar mensagem: ${err.message}` });
+    runProjectCleanup(session);
   }
 }
 
@@ -242,6 +245,7 @@ export async function stopTest(session) {
   } else {
     session.status = 'stopped';
     broadcast(session, 'status', { status: 'stopped', message: 'Teste parado pelo usuário.' });
+    runProjectCleanup(session);
   }
 }
 
@@ -264,5 +268,29 @@ async function finishTest(session) {
     session.status = 'error';
     session.error = err.message;
     broadcast(session, 'error', { message: `Erro ao gerar relatório: ${err.message}` });
+  } finally {
+    runProjectCleanup(session);
   }
+}
+
+// Apaga lead/threads no banco do projeto cliente após teste terminar.
+// Best-effort: nunca quebra o fluxo do teste.
+function runProjectCleanup(session) {
+  const project = session?.config?.project;
+  if (!project || !isValidProject(project)) return;
+  if (session._cleanupRan) return;
+  session._cleanupRan = true;
+
+  (async () => {
+    try {
+      const testerPhone = await getInstanceOwnerNumber(session);
+      if (!testerPhone) {
+        console.warn(`[ProjectCleanup] Não foi possível obter o número da instância "${session.config.evolutionInstanceName}" — pulando.`);
+        return;
+      }
+      await cleanupTestLead(project, testerPhone);
+    } catch (err) {
+      console.error(`[ProjectCleanup] Erro inesperado em runProjectCleanup (sessão ${session.id}):`, err.message);
+    }
+  })();
 }

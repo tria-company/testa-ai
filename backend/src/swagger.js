@@ -38,6 +38,13 @@ export const swaggerSpec = {
           evolutionInstanceName: { type: 'string', example: 'tester-01', description: 'Nome da instância na Evolution API' },
           evolutionApiKey: { type: 'string', example: 'evo-key-xxx', description: 'API Key da Evolution API' },
           openaiApiKey: { type: 'string', example: 'sk-xxx', description: 'API Key da OpenAI' },
+          project: {
+            type: 'string',
+            enum: ['seu-elias'],
+            nullable: true,
+            description: 'Projeto cliente. Se preenchido, ao finalizar o teste o sistema apaga o lead/threads do testador no Supabase do projeto. Vazio = sem limpeza.',
+            example: 'seu-elias',
+          },
         },
       },
       StartTestResponse: {

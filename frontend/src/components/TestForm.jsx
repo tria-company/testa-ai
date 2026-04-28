@@ -7,7 +7,13 @@ const initialForm = {
   evolutionApiUrl: '',
   evolutionInstanceName: '',
   evolutionApiKey: '',
+  project: '',
 };
+
+const PROJECT_OPTIONS = [
+  { value: '', label: 'Sem limpeza (não apaga nada do agente)' },
+  { value: 'seu-elias', label: 'Seu Elias' },
+];
 
 export default function TestForm({ onStart, disabled }) {
   const [form, setForm] = useState(initialForm);
@@ -83,6 +89,24 @@ export default function TestForm({ onStart, disabled }) {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           disabled={disabled}
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          Projeto Cliente (opcional)
+        </label>
+        <select
+          name="project"
+          value={form.project}
+          onChange={handleChange}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={disabled}
+        >
+          {PROJECT_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-500 mt-1">Se selecionado, ao final do teste o sistema apaga o lead/threads do testador no banco do projeto.</p>
       </div>
 
       <div className="border-t border-gray-700 pt-4">

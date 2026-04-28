@@ -75,6 +75,35 @@ export async function configureWebhook(session) {
   console.log(`[Webhook] Configurado e validado para instancia "${instanceName}": ${webhookUrl}`);
 }
 
+export async function getInstanceOwnerNumber(session) {
+  const { client, instanceName } = evoApi(session);
+
+  // Evolution v2: GET /instance/fetchInstances?instanceName={name}
+  const { data } = await client.get('/instance/fetchInstances', {
+    params: { instanceName },
+  });
+
+  // A resposta pode vir como array ou objeto; o número costuma estar em owner/ownerJid
+  const entry = Array.isArray(data) ? data[0] : data;
+  const candidates = [
+    entry?.owner,
+    entry?.ownerJid,
+    entry?.instance?.owner,
+    entry?.instance?.ownerJid,
+    entry?.instance?.number,
+    entry?.number,
+  ];
+
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.length > 0) {
+      const digits = c.replace(/@.*$/, '').replace(/\D/g, '');
+      if (digits.length >= 8) return digits;
+    }
+  }
+
+  return null;
+}
+
 export async function sendTextMessage(session, text) {
   const { client, instanceName } = evoApi(session);
 

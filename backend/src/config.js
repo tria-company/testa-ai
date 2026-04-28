@@ -9,6 +9,16 @@ export const config = {
   sessionTtlHours: parseInt(process.env.SESSION_TTL_HOURS, 10) || 6,
 };
 
+// Projetos cliente — cada um aponta para um Supabase próprio onde leads/threads são apagados
+// após o teste. Adicione novos projetos aqui + variáveis de ambiente correspondentes.
+export const PROJECTS = {
+  'seu-elias': {
+    label: 'Seu Elias',
+    supabaseUrl: process.env.SEU_ELIAS_SUPABASE_URL,
+    supabaseKey: process.env.SEU_ELIAS_SUPABASE_KEY,
+  },
+};
+
 let _webhookUrl = config.webhookBaseUrl;
 
 export function getWebhookUrl() {
