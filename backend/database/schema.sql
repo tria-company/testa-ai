@@ -10,6 +10,7 @@ CREATE TABLE testaai_sessions (
   custom_scenario TEXT,
   external_ref VARCHAR(100),
   case_data JSONB,
+  project VARCHAR(50),
   status VARCHAR(50) DEFAULT 'pending',
   persona JSONB,
   report JSONB,
@@ -23,6 +24,7 @@ CREATE INDEX idx_sessions_status ON testaai_sessions(status);
 CREATE INDEX idx_sessions_agent_number ON testaai_sessions(agent_whatsapp_number);
 CREATE INDEX idx_sessions_external_ref ON testaai_sessions(external_ref);
 CREATE INDEX idx_sessions_created_at ON testaai_sessions(created_at);
+CREATE INDEX idx_sessions_project ON testaai_sessions(project);
 
 -- Tabela de Configurações de Sessão
 CREATE TABLE testaai_session_configs (

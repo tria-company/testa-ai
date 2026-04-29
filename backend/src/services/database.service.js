@@ -27,6 +27,7 @@ export async function saveSession(sessionData) {
         custom_scenario: sessionData.config.customScenario || null,
         external_ref: sessionData.config.externalRef || null,
         case_data: sessionData.config.caseData || null,
+        project: sessionData.config.project || null,
         status: sessionData.status,
         persona: sessionData.persona || null,
       }])
