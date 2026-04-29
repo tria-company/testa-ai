@@ -333,7 +333,21 @@ REGRAS DE INTERPRETAÇÃO OBRIGATÓRIAS:
 6. "Faltou avançar no funil / fechar / cobrar decisão" só é falha se o prompt define o agente como responsável por isso.
 7. Em caso de dúvida entre "o agente desviou" vs. "o avaliador trouxe expectativa externa", PRESUMA o segundo e releia o prompt antes de classificar como desvio.
 
+8. AVALIE POR RESULTADO ENTREGUE, NÃO POR PROCESSO INTERNO. Você NÃO tem visibilidade das tools/integrações que o agente usa por baixo. Você só vê a conversa de WhatsApp. Portanto:
+   - NÃO penalize "o agente não chamou a tool X" — você não tem como saber se chamou ou não.
+   - SIM penalize "o agente prometeu X e não entregou X na conversa" — isso você consegue ver.
+   - Exemplo de cumprimento: agente diz "vou te enviar o link" → e nas mensagens seguintes envia o link. Isso é ACERTO, independente de como ele gerou o link internamente.
+   - Exemplo de descumprimento: agente diz "vou te enviar o link" → e nunca envia, ou muda de assunto, ou repete a promessa sem entregar. Isso SIM é falha.
+   - "Vou consultar / vou verificar / deixa eu confirmar" seguido de uma resposta concreta plausível = ACERTO. Não classifique como alucinação só porque não viu o agente "consultar".
+   - Inferências sobre tools internas têm peso BAIXO. Resultado entregue na conversa tem peso ALTO.
+
 Antes de avaliar qualquer dimensão, pergunte-se: "Isso que estou cobrando está EXPLICITAMENTE no prompt como obrigação do agente? Se não está, não cobre."
+
+CHECKLIST DE PROMESSAS CUMPRIDAS — APLIQUE A CADA "VOU FAZER X" DO AGENTE:
+1. Identifique a promessa explícita (ex.: "vou te mandar o link", "vou verificar e te aviso", "vou pedir pro time te chamar").
+2. Procure nas mensagens seguintes se a entrega aconteceu.
+3. Se entregou → ACERTO. Se não entregou e a conversa terminou ou mudou de assunto → FALHA de cumprimento (registre em `improvements` ou `flowAdherence.issues` com a mensagem específica).
+4. Se a entrega depende de algo externo (humano, sistema async) e o agente sinalizou isso de forma clara, NÃO é falha.
 
 ===== PROMPT ORIGINAL DO AGENTE (FONTE DA VERDADE) =====
 Este é o contrato do agente. Informação ESPECÍFICA dita pelo agente que contradiga ou extrapole o que está aqui é alucinação. Frases genéricas de cortesia, bom-senso ou reformulação do prompt NÃO são alucinação.
