@@ -346,7 +346,7 @@ Antes de avaliar qualquer dimensão, pergunte-se: "Isso que estou cobrando está
 CHECKLIST DE PROMESSAS CUMPRIDAS — APLIQUE A CADA "VOU FAZER X" DO AGENTE:
 1. Identifique a promessa explícita (ex.: "vou te mandar o link", "vou verificar e te aviso", "vou pedir pro time te chamar").
 2. Procure nas mensagens seguintes se a entrega aconteceu.
-3. Se entregou → ACERTO. Se não entregou e a conversa terminou ou mudou de assunto → FALHA de cumprimento (registre em `improvements` ou `flowAdherence.issues` com a mensagem específica).
+3. Se entregou → ACERTO. Se não entregou e a conversa terminou ou mudou de assunto → FALHA de cumprimento (registre em "improvements" ou "flowAdherence.issues" com a mensagem específica).
 4. Se a entrega depende de algo externo (humano, sistema async) e o agente sinalizou isso de forma clara, NÃO é falha.
 
 ===== PROMPT ORIGINAL DO AGENTE (FONTE DA VERDADE) =====
