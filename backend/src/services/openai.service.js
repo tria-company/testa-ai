@@ -655,7 +655,7 @@ Retorne UM ÚNICO objeto JSON válido com a estrutura abaixo. Campos de lista po
   },
   "promptCompliance": {
     "score": 0,
-    "analysis": "O agente seguiu as REGRAS EXPLÍCITAS do prompt? Apenas regras textuais — não ideais.",
+    "analysis": "O agente seguiu as REGRAS EXPLÍCITAS do prompt? Apenas regras textuais — não ideais. Calibração: 9-10 = todas as regras críticas cumpridas + paráfrases benignas em blocos cosméticos OK; 7-8 = todas críticas cumpridas com 1-2 violações pontuais sem mudar sentido; 5-6 = uma violação grave OU várias pontuais; <5 = violações graves recorrentes ou abertura de margem.",
     "violations": [
       {
         "rule": "Citação literal da regra do prompt",
@@ -726,16 +726,24 @@ Retorne UM ÚNICO objeto JSON válido com a estrutura abaixo. Campos de lista po
   }
 }
 
-# ESCALA DE SCORES — CALIBRAÇÃO
+# ESCALA DE SCORES — CALIBRAÇÃO REALISTA
 
-- 10: impecável. Raro. Reserve para nada relevante a corrigir.
-- 8-9: muito bom. Cumpre função com competência; ajustes são refinamento.
-- 6-7: bom. Cumpre o essencial com falhas pontuais que não comprometem o objetivo.
-- 4-5: mediano. Falhas observáveis que prejudicam experiência. Inclui sessões inconclusivas (timeout).
-- 2-3: ruim. Falhas recorrentes ou graves.
-- 0-1: não serve. Reconstrução necessária.
+A escala é desenhada para ser USADA, não evitada. Notas altas (9-10) são alcançáveis e devem aparecer quando o desempenho justifica. Não trate 9-10 como "raro" — trate como "merecido quando o agente entrega".
 
-REGRA DE CALIBRAÇÃO: agentes que cumprem o fluxo principal, não alucinam dados específicos e respondem no tom certo MERECEM 7-8, mesmo com imperfeições menores. Não puna pequenos deslizes com nota baixa.
+- **10**: excepcional. Conduz o objetivo do prompt sem nenhuma falha verificável. Pode ter zero ou um deslize cosmético irrelevante (ex: uma vírgula a mais).
+- **9**: excelente. Cumpre o objetivo com 1-2 imperfeições muito pequenas e isoladas (ex: omitiu uma frase opcional de transição, mas conteúdo factual e fluxo principais estão certos).
+- **8**: muito bom. Cumpre o objetivo com 2-3 imperfeições pontuais que um cliente real não notaria (ex: pulou C3 em uma transição, fragmentou um determinístico, mas sem mudar conteúdo nem abrir margem).
+- **7**: bom. Cumpre o objetivo com falhas pontuais perceptíveis mas não impeditivas (ex: 1-2 desvios de Answer-First, mas resolveu depois).
+- **6**: aceitável. Cumpre o essencial; tem falhas notáveis mas o cliente sai com o problema do escopo resolvido. **Limiar de aprovação — sessão em produção é viável**.
+- **4-5**: borderline. Funciona em parte; cliente real pode sair confuso ou com pergunta-chave sem resposta.
+- **2-3**: ruim. Falhas recorrentes ou graves; alucinação grave isolada; nome errado consistente; fluxo quebrado.
+- **0-1**: não serve. Agente não cumpre função; alucinações graves múltiplas; reconstrução necessária.
+
+REGRA DE CALIBRAÇÃO RECALIBRADA:
+- Agente que cumpre fluxo principal + zero alucinação grave + tom certo + 1-2 imperfeições cosméticas = **8 ou 9**.
+- Agente que cumpre fluxo principal + zero alucinação + executa determinísticos com conteúdo correto (mesmo com paráfrase em blocos cosméticos por Regra DEZ) = **9-10**.
+- Pequenas imperfeições NÃO descem a nota mais que 1 ponto cada. Um Answer-First quebrado em 1 mensagem ≠ -2 pontos. É -0.3 a -0.5.
+- Múltiplas dimensões boas + uma pontual fraca: a nota fica perto da média ponderada, não puxada pra baixo pela pior.
 
 # VEREDITO — MAPEAMENTO BINÁRIO (APROVADO ou REPROVADO)
 
