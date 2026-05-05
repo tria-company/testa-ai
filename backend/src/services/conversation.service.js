@@ -7,15 +7,15 @@ import { broadcast } from '../utils/sse.js';
 import { startTimer, elapsed } from '../utils/timer.js';
 import { retryWithBackoff } from '../utils/retry.js';
 
-const RESPONSE_TIMEOUT_MS = 360000; // 6 minutos — agente baseline ~60s; 6min cobre picos sem virar timeout artificial
-const MIN_DELAY_BETWEEN_MESSAGES_MS = 2000; // anti-spam
+const RESPONSE_TIMEOUT_MS = 180000; // 3 minutos — agente baseline ~60s; 3min cobre picos sem segurar o teste demais
+const MIN_DELAY_BETWEEN_MESSAGES_MS = 500; // anti-spam mínimo
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function randomDelay() {
-  return 1000 + Math.random() * 2000; // 1-3s para simular digitação humana
+  return 200 + Math.random() * 800; // 0.2-1.0s — tester rápido
 }
 
 export async function begin(session) {
@@ -144,7 +144,7 @@ function handleTimeout(session) {
     // Registra timeout como resposta do agente
     const timeoutMessage = {
       role: 'agent',
-      content: '[TIMEOUT - Agente não respondeu em 6 minutos]',
+      content: '[TIMEOUT - Agente não respondeu em 3 minutos]',
       timestamp: Date.now(),
       responseTimeMs: RESPONSE_TIMEOUT_MS,
       timeout: true,
