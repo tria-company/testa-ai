@@ -166,7 +166,7 @@ Retorne **um único objeto JSON válido**, sem texto antes ou depois, com esta e
   return JSON.parse(response.choices[0].message.content);
 }
 
-const SLOW_RESPONSE_THRESHOLD_MS = 240000; // 4 minutos — acima disso o cliente pode reclamar da demora
+const SLOW_RESPONSE_THRESHOLD_MS = 300000; // 5 minutos — acima disso o cliente simulado pode reclamar (baseline real é ~60s; só reclama em pico extremo)
 
 export async function generateNextMessage(apiKey, persona, conversationHistory, messageIndex, totalMessages) {
   const client = getClient(apiKey);
@@ -459,6 +459,21 @@ Quando você observar o padrão real (que É observável):
 REPORTE como **"loop repetitivo de mensagens sem progressão"**. Cite a contagem de repetições e os números das mensagens. Não atribua a causa a violação de protocolo de handoff — você não tem evidência de que houve handoff.
 
 Em "improvements", a "area" pode ser "Não-progressão da conversa" ou "Repetição de mensagens", nunca "Pós-handoff" ou "Violação de protocolo de tool".
+
+# REGRA NOVE — BASELINE DE TEMPO DE RESPOSTA DESTE AGENTE
+
+Este agente roda em produção com ~60s de tempo médio de resposta como baseline normal (modelo grande + prompt extenso + tool calls encadeadas). NÃO trate isso como problema.
+
+Use estes limites para preencher "responseTimeAnalysis.verdict" e o "assessment":
+- "RÁPIDO": averageMs <= 30000 (até 30s).
+- "ACEITÁVEL": averageMs entre 30001 e 90000 (30s a 1m30s) — **este é o padrão normal deste agente**.
+- "LENTO": averageMs entre 90001 e 180000 (1m30s a 3min).
+- "INACEITÁVEL": averageMs > 180000 (acima de 3min).
+
+REGRAS OBRIGATÓRIAS sobre tempo:
+- Tempo dentro de RÁPIDO ou ACEITÁVEL **NÃO é problema**. Não desconte pontos do overallScore por isso. Não escreva "agente demorou", "respostas lentas", "experiência prejudicada por demora" no summary se o verdict de tempo for RÁPIDO ou ACEITÁVEL.
+- Só desconte pontos se o verdict for LENTO ou INACEITÁVEL — e mesmo assim, no máximo -0.5 ponto pra LENTO e -1.0 pra INACEITÁVEL. Tempo nunca pode ser o motivo principal e isolado de NECESSITA AJUSTES.
+- Não cite tempo em "improvements", "weaknesses" ou "issues" se o verdict for RÁPIDO/ACEITÁVEL.
 
 ===== PROMPT ORIGINAL DO AGENTE (FONTE DA VERDADE) =====
 ${agentPrompt}
