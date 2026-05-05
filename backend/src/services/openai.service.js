@@ -475,6 +475,64 @@ REGRAS OBRIGATÓRIAS sobre tempo:
 - Só desconte pontos se o verdict for LENTO ou INACEITÁVEL — e mesmo assim, no máximo -0.5 ponto pra LENTO e -1.0 pra INACEITÁVEL. Tempo nunca pode ser o motivo principal e isolado de NECESSITA AJUSTES.
 - Não cite tempo em "improvements", "weaknesses" ou "issues" se o verdict for RÁPIDO/ACEITÁVEL.
 
+# REGRA DEZ — ESTRATIFICAÇÃO DE LITERALIDADE EM RESPOSTAS DETERMINÍSTICAS
+
+O prompt do agente pode definir respostas determinísticas (ex: blocos como <deterministic_replies>). Nem toda paráfrase é violação. Estratifique antes de marcar:
+
+A) **BLOCOS CRÍTICOS DE COMPLIANCE — exigir LITERAL** (drift textual = risco financeiro/legal):
+- Desconto / cupom / promoção / condição especial.
+- Negociação ativa de preço.
+- Garantia / reembolso / cancelamento.
+- Juros / cálculo de parcela.
+- Lead afirma que pagou / envio de comprovante.
+- FIES / ProUni / financiamento estudantil / Crediário.
+- Parceria bancária / instituição financeira.
+- DOC / TED / transferência manual.
+- Parcelamento acima de 12x.
+- Produto em definição (Start, Evolution etc).
+
+Nesses blocos: se o agente reformulou de modo que mude SENTIDO, ABRA MARGEM, OMITA INFORMAÇÃO ou ADICIONE info inexistente → violação grave (compliance).
+
+Exemplos de violação grave (cobrar):
+- Trocar "o valor é o mesmo pra todo mundo" por "em geral é o mesmo valor" → abre margem.
+- Trocar "tem garantia, é só pedir reembolso dentro do prazo" por "a gente pode ver isso depois" → muda contrato.
+- Trocar "vou pedir pro time falar com você" (após negociação) por "talvez consigamos algo, deixa eu ver" → abre margem proibida.
+- Calcular a parcela em vez de redirecionar pra tela de pagamento → invenção de número.
+
+NÃO conta como violação grave (não cobrar):
+- Adicionar prefixo curto de reconhecimento ANTES do bloco ("Entendo, [Nome].", "Boa pergunta.").
+- Trocar conectores neutros ("e" ↔ "também" ↔ "+").
+- Quebrar a frase em mais ou menos balões mantendo o conteúdo.
+- Mudar "[VALOR]" por o valor real ("R$5.497").
+
+B) **BLOCOS COSMÉTICOS — paráfrase é OK** (drift textual = irrelevante):
+- Saudações, despedidas, frases de transição, frases de cortesia, perguntas de continuação.
+
+Nesses, NÃO cobre literalidade. Só cobre se o agente OMITIR conteúdo necessário ou MUDAR sentido.
+
+# REGRA ONZE — DETECTOR DE EXPRESSÕES ABRIDORAS DE MARGEM
+
+Em blocos críticos de compliance (Regra DEZ.A), procure no texto da resposta do agente as seguintes expressões. Cada uma é sinal de drift que deve virar violação grave em "promptCompliance.violations":
+
+- "talvez"
+- "em geral"
+- "por enquanto"
+- "depende"
+- "posso conversar"
+- "pode ser que"
+- "vou ver"
+- "vou tentar"
+- "consigo verificar"
+- "vamos ver"
+- "deixa eu ver"
+- "a gente pode"
+- "quem sabe"
+- "às vezes"
+
+Quando o agente usa qualquer uma dessas em contexto de desconto, negociação, garantia, juros, produto em definição → registre em "promptCompliance.violations" com severity alta. Cite a expressão exata e o número da mensagem.
+
+NÃO confunda com uso legítimo dessas expressões em outros contextos (ex: "deixa eu ver as datas das próximas turmas" não é violação — é fala normal de atendimento).
+
 ===== PROMPT ORIGINAL DO AGENTE (FONTE DA VERDADE) =====
 ${agentPrompt}
 ===== FIM DO PROMPT =====
@@ -709,6 +767,8 @@ Antes de finalizar o JSON, releia sua análise e confirme:
 - [ ] Nenhuma afirmação minha extrapola o transcript ou o prompt.
 - [ ] Não citei "tool não chamada", "ferramenta simulada", "deveria ter executado a tool".
 - [ ] Não escrevi "violou post_handoff_protocol", "continuou após handoff" ou variantes (Regra OITO). Padrões repetitivos viram "loop repetitivo de mensagens sem progressão".
+- [ ] Para respostas determinísticas, apliquei a Regra DEZ: cobrei literal SÓ em blocos críticos de compliance; paráfrase em saudação/cortesia/transição não virou violação.
+- [ ] Para blocos críticos de compliance, varri o detector da Regra ONZE (talvez, em geral, por enquanto, depende, etc.) e listei como violação grave quando aparecem.
 - [ ] Não usei score/dados da persona como ground truth do negócio.
 - [ ] Não atribuí causa específica para timeouts.
 - [ ] Listas (issues, instances, weaknesses) só contêm itens com evidência ancorada.
