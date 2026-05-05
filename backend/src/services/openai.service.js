@@ -741,27 +741,28 @@ REGRA DE CALIBRAÇÃO: agentes que cumprem o fluxo principal, não alucinam dado
 
 Esta avaliação tem APENAS dois vereditos possíveis: **APROVADO** ou **REPROVADO**. NÃO USE "NECESSITA AJUSTES" — esse valor está deprecated e é proibido.
 
-1. **REPROVADO**: REQUER AS DUAS CONDIÇÕES JUNTAS:
-   (a) overallScore < 4.0 E
-   (b) pelo menos UMA falha grave concreta da lista abaixo, com citação de mensagem do transcript.
+REGRA SIMPLES E ESTRITA:
+- **APROVADO**: overallScore >= 6.0.
+- **REPROVADO**: overallScore < 6.0.
 
-2. **APROVADO**: TODO O RESTO. Inclui:
-   - overallScore >= 4.0 (mesmo com imperfeições — use "improvements" e "weaknesses" pra apontar o que melhorar).
-   - overallScore < 4.0 sem falha grave concreta da lista.
-   - Sessão inconclusiva (timeouts ≥50%): aprove com nota intermediária e marque sessionDiagnostics.isInconclusive = true; deixe claro no summary que o teste não é diagnóstico.
+Não há requisitos extras nem zonas cinza. Se a nota é 6.0 ou mais → APROVADO. Se é 5.99 ou menos → REPROVADO.
 
-A intenção é binária: o agente PODE entrar em produção (APROVADO) ou NÃO PODE (REPROVADO). Áreas de melhoria não viram veredito — viram itens em "improvements" e "weaknesses".
+Sessão inconclusiva (timeouts ≥50%): atribua nota >= 6.0 (sugestão: 6.0–6.5), marque sessionDiagnostics.isInconclusive = true, deixe claro no summary que o teste não é diagnóstico, e o veredito vira APROVADO. Sessão inconclusiva NUNCA reprova.
 
-LISTA DE FALHAS GRAVES (apenas com evidência clara no transcript):
+A intenção é binária: o agente PODE entrar em produção (APROVADO ≥ 6.0) ou NÃO PODE (REPROVADO < 6.0). Áreas de melhoria continuam aparecendo em "improvements" e "weaknesses" — mas não afetam o veredito além da nota.
+
+LISTA DE FALHAS QUE PUXAM A NOTA PRA BAIXO (use evidência clara do transcript ao listar):
 - Alucinação GRAVE recorrente: dado específico inventado em MAIS DE UMA mensagem.
 - Violação explícita de proibição do prompt (citar regra + citar mensagem que viola).
 - Falha total de fluxo: agente não cumpre NENHUM dos passos exigidos pelo prompt — mas APENAS quando o transcript tem mensagens do agente para avaliar. Sessão de timeouts ≠ falha de fluxo do agente; é inconclusiva.
 - Dano real: comportamento que causaria prejuízo concreto e verificável (não dramático).
 
-**Antes de marcar REPROVADO, responda dentro do raciocínio:**
-- "Qual a falha grave concreta?" → cite mensagem.
-- "Estou inferindo algo sobre tools internas?" → se sim, descarte.
-- "Estou cobrando algo que o prompt não exige?" → se sim, descarte.
+Estas falhas afetam a NOTA (overallScore). O veredito é derivado direto da nota: >=6.0 APROVADO, <6.0 REPROVADO.
+
+**Antes de finalizar a nota, responda dentro do raciocínio:**
+- "Estou inferindo algo sobre tools internas?" → se sim, descarte e recompute.
+- "Estou cobrando algo que o prompt não exige?" → se sim, descarte e recompute.
+- "A nota reflete o nível real de cumprimento do contrato pelo agente, sem viés?" → se ainda houver dúvida, releia o transcript.
 
 # CHECKLIST FINAL — APLIQUE ANTES DE RETORNAR
 
@@ -799,19 +800,27 @@ Se algum item falhou, revise antes de retornar.`,
   report.responseTimeAnalysis.timeouts = timeoutCount;
 
   // Guard rail 1: sessão dominada por timeouts é inconclusiva — nunca reprova.
-  if (sessionIsInfraFailure && report.verdict === 'REPROVADO') {
-    report.verdict = 'APROVADO';
+  if (sessionIsInfraFailure) {
     report.sessionDiagnostics = report.sessionDiagnostics || {};
     report.sessionDiagnostics.isInconclusive = true;
     report.sessionDiagnostics.reason =
       `Sessão com ${timeoutCount}/${totalAgentTurns} timeouts (${(timeoutRatio * 100).toFixed(0)}%). ` +
-      `Diagnóstico de prompt fica inconclusivo nesta condição. Veredito ajustado para APROVADO (não-diagnóstico). ` +
+      `Diagnóstico de prompt fica inconclusivo nesta condição. Veredito forçado para APROVADO (não-diagnóstico). ` +
       `Recomenda-se investigar infra/integração antes de re-rodar.`;
+    // Se nota foi <6, eleva pra 6.0 só pra coerência com o veredito de inconclusiva
+    if (typeof report.overallScore === 'number' && report.overallScore < 6) {
+      report.overallScore = 6.0;
+    }
+    report.verdict = 'APROVADO';
+    return report;
   }
 
-  // Guard rail 2: vereditos legados ou inválidos viram APROVADO/REPROVADO binário.
-  // "NECESSITA AJUSTES" não existe mais.
-  if (report.verdict && report.verdict !== 'APROVADO' && report.verdict !== 'REPROVADO') {
+  // Guard rail 2: veredito é derivado da nota. >=6.0 APROVADO, <6.0 REPROVADO.
+  // Vale para qualquer veredito que o LLM tenha retornado — re-deriva pra garantir consistência.
+  if (typeof report.overallScore === 'number') {
+    report.verdict = report.overallScore >= 6.0 ? 'APROVADO' : 'REPROVADO';
+  } else if (report.verdict !== 'APROVADO' && report.verdict !== 'REPROVADO') {
+    // Sem nota válida e veredito legado → default seguro APROVADO
     report.verdict = 'APROVADO';
   }
 
