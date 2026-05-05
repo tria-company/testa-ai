@@ -9,6 +9,7 @@ import { retryWithBackoff } from '../utils/retry.js';
 
 const RESPONSE_TIMEOUT_MS = 180000; // 3 minutos — agente baseline ~60s; 3min cobre picos sem segurar o teste demais
 const MIN_DELAY_BETWEEN_MESSAGES_MS = 500; // anti-spam mínimo
+const SESSION_MAX_DURATION_MS = 1500000; // 25 min — força finalização para o orquestrador receber report antes do timeout dele (30 min)
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -20,6 +21,11 @@ function randomDelay() {
 
 export async function begin(session) {
   try {
+    // Cap global de duração: força finalização antes do orquestrador desistir.
+    session.maxDurationTimer = setTimeout(() => {
+      handleSessionMaxDuration(session);
+    }, SESSION_MAX_DURATION_MS);
+
     // 1. Configura webhook
     session.status = 'configuring_webhook';
     broadcast(session, 'status', { status: session.status });
@@ -139,6 +145,41 @@ async function sendNextMessage(session) {
   }
 }
 
+function handleSessionMaxDuration(session) {
+  // Acionado quando a sessão passa do cap global. Força finalização para o
+  // orquestrador receber o relatório antes de seu próprio timeout.
+  if (session.status === 'completed' || session.status === 'stopped' || session.status === 'error') return;
+
+  console.warn(`[Session ${session.id}] Cap global de ${SESSION_MAX_DURATION_MS / 1000}s atingido — forçando finalização.`);
+
+  // Limpa todos os timers
+  if (session.timeoutTimer) clearTimeout(session.timeoutTimer);
+  if (session.multiMessageTimer) clearTimeout(session.multiMessageTimer);
+  if (session.multiMessageMaxTimer) clearTimeout(session.multiMessageMaxTimer);
+
+  // Marca pendente como resolvido
+  if (session.pendingResponse && !session.pendingResponse.resolved) {
+    session.pendingResponse.resolved = true;
+  }
+
+  session.maxDurationReached = true;
+  broadcast(session, 'status', {
+    status: session.status,
+    message: `Cap global de ${Math.round(SESSION_MAX_DURATION_MS / 60000)}min atingido — gerando relatório com o que foi coletado.`,
+  });
+
+  // Tenta gerar relatório com o que tem; se não tiver mensagens suficientes, marca stopped.
+  const agentMessages = session.conversation.filter((m) => m.role === 'agent').length;
+  if (agentMessages >= 2) {
+    finishTest(session);
+  } else {
+    session.status = 'stopped';
+    session.error = 'Cap global de duração atingido sem conversa suficiente para relatório.';
+    broadcast(session, 'status', { status: 'stopped', message: session.error });
+    runProjectCleanup(session);
+  }
+}
+
 function handleTimeout(session) {
   if (session.pendingResponse && !session.pendingResponse.resolved) {
     // Registra timeout como resposta do agente
@@ -232,6 +273,10 @@ export async function stopTest(session) {
     clearTimeout(session.multiMessageMaxTimer);
     session.multiMessageMaxTimer = null;
   }
+  if (session.maxDurationTimer) {
+    clearTimeout(session.maxDurationTimer);
+    session.maxDurationTimer = null;
+  }
 
   // Marca resposta pendente como resolvida
   if (session.pendingResponse && !session.pendingResponse.resolved) {
@@ -250,6 +295,11 @@ export async function stopTest(session) {
 }
 
 async function finishTest(session) {
+  // Limpa o cap global — vamos finalizar agora.
+  if (session.maxDurationTimer) {
+    clearTimeout(session.maxDurationTimer);
+    session.maxDurationTimer = null;
+  }
   try {
     session.status = 'generating_report';
     broadcast(session, 'status', { status: session.status, message: 'Gerando relatório...' });
