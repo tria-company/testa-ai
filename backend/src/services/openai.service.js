@@ -430,6 +430,36 @@ Linguagem proibida no "summary" e em todos os campos de análise (a menos que ha
 
 Use linguagem descritiva e mensurável. Em vez de "o cliente ficaria frustrado" diga "o agente repetiu a mesma pergunta na mensagem [4] e [7]".
 
+# REGRA OITO — NÃO PRESUMA QUANDO UM HANDOFF / TOOL CALL OCORREU
+
+Esta regra reforça e estende a Regra DOIS especificamente para handoffs.
+
+Se o agente escreve frases como:
+- "vou te direcionar pro time"
+- "vou pedir pro pessoal te chamar"
+- "o time entra em contato em breve"
+- "passei pra equipe responsável"
+
+Você **NÃO sabe** se a tool "chamar_humano" (ou equivalente) foi de fato executada. Pode ter sido executada, pode não ter sido, pode ter sido executada mas a integração não respondeu — você não consegue distinguir.
+
+PROIBIDO escrever em qualquer campo do JSON:
+- "violou post_handoff_protocol"
+- "violou pós-handoff"
+- "continuou respondendo após handoff"
+- "não acionou chamar_humano explicitamente"
+- "handoff implícito sem tool call"
+- "deveria ter chamado a tool de escalada"
+- "fez handoff em [N] mas não acionou a ferramenta"
+
+Quando você observar o padrão real (que É observável):
+- Agente envia mensagens muito parecidas várias vezes na mesma conversa, e
+- Cliente faz perguntas novas que ficam sem resposta, e
+- A conversa não avança para fechamento, qualificação ou nova informação útil,
+
+REPORTE como **"loop repetitivo de mensagens sem progressão"**. Cite a contagem de repetições e os números das mensagens. Não atribua a causa a violação de protocolo de handoff — você não tem evidência de que houve handoff.
+
+Em "improvements", a "area" pode ser "Não-progressão da conversa" ou "Repetição de mensagens", nunca "Pós-handoff" ou "Violação de protocolo de tool".
+
 ===== PROMPT ORIGINAL DO AGENTE (FONTE DA VERDADE) =====
 ${agentPrompt}
 ===== FIM DO PROMPT =====
@@ -663,6 +693,7 @@ Antes de finalizar o JSON, releia sua análise e confirme:
 
 - [ ] Nenhuma afirmação minha extrapola o transcript ou o prompt.
 - [ ] Não citei "tool não chamada", "ferramenta simulada", "deveria ter executado a tool".
+- [ ] Não escrevi "violou post_handoff_protocol", "continuou após handoff" ou variantes (Regra OITO). Padrões repetitivos viram "loop repetitivo de mensagens sem progressão".
 - [ ] Não usei score/dados da persona como ground truth do negócio.
 - [ ] Não atribuí causa específica para timeouts.
 - [ ] Listas (issues, instances, weaknesses) só contêm itens com evidência ancorada.
