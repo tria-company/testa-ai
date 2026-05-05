@@ -19,29 +19,16 @@ function ScoreBadge({ score, size = 'md' }) {
 function VerdictBadge({ verdict }) {
   if (!verdict) return null;
   const v = verdict.toUpperCase();
-  const style =
-    v === 'APROVADO' ? 'bg-green-600 text-white'
-    : v === 'REPROVADO' ? 'bg-red-600 text-white'
-    : 'bg-yellow-600 text-white';
+  const style = v === 'REPROVADO' ? 'bg-red-600 text-white' : 'bg-green-600 text-white';
   return (
     <span className={`text-xs font-bold px-2 py-1 rounded ${style}`}>{verdict}</span>
   );
 }
 
 function productionRecommendation(report) {
-  const score = typeof report.overallScore === 'number' ? report.overallScore : parseFloat(report.overallScore);
   const v = (report.verdict || '').toUpperCase();
 
-  if (v === 'APROVADO' || score >= 7) {
-    return {
-      label: 'Pode usar em produção',
-      status: 'SIM',
-      detail: 'Agente cumpre seu papel com qualidade suficiente para atender clientes reais.',
-      style: 'bg-green-900/30 border-green-600/40 text-green-300',
-      pillStyle: 'bg-green-600 text-white',
-    };
-  }
-  if (v === 'REPROVADO' || score < 5) {
+  if (v === 'REPROVADO') {
     return {
       label: 'Não recomendado para produção',
       status: 'NÃO',
@@ -50,12 +37,14 @@ function productionRecommendation(report) {
       pillStyle: 'bg-red-600 text-white',
     };
   }
+
+  // Default: APROVADO (também cobre vereditos legados como "NECESSITA AJUSTES" que possam vir do banco)
   return {
-    label: 'Usar em produção somente após ajustes',
-    status: 'COM RESSALVAS',
-    detail: 'Funciona em parte, mas tem problemas que um cliente real perceberia. Aplique as melhorias sugeridas antes.',
-    style: 'bg-yellow-900/30 border-yellow-600/40 text-yellow-200',
-    pillStyle: 'bg-yellow-600 text-white',
+    label: 'Pode usar em produção',
+    status: 'SIM',
+    detail: 'Agente cumpre seu papel sem falhas graves. Veja "Melhorias Sugeridas" para refinamentos opcionais.',
+    style: 'bg-green-900/30 border-green-600/40 text-green-300',
+    pillStyle: 'bg-green-600 text-white',
   };
 }
 

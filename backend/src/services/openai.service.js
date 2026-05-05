@@ -393,7 +393,7 @@ Diretrizes obrigatórias sobre timeouts:
 - Timeout = ausência de resposta do agente dentro do tempo limite. Pode ter causas múltiplas: infra, parsing, modelo travado, rate limit, integração externa, prompt complexo. Você NÃO consegue distinguir.
 - **Não atribua timeout a "prompt complexo demais" ou "instruções conflitantes" sem evidência textual no transcript.** Especular causa de timeout é fora do seu escopo.
 - Reporte o número de timeouts em "responseTimeAnalysis". Não use timeout como evidência de falha de prompt em "hallucinationDetection", "flowAdherence" ou "promptAnalysis".
-- Se ${sessionIsInfraFailure ? "TRUE" : "FALSE"} (sessão dominada por timeouts: ≥50% dos turnos): trate o transcript como **inconclusivo**. Veredito = NECESSITA AJUSTES com nota neutra (4-5) e "summary" deixando explícito que o teste não é diagnóstico de prompt; recomende reexecutar após investigar infra. Não invente conclusões sobre o prompt.
+- Se ${sessionIsInfraFailure ? "TRUE" : "FALSE"} (sessão dominada por timeouts: ≥50% dos turnos): trate o transcript como **inconclusivo**. Veredito = APROVADO com nota intermediária (4-5), "sessionDiagnostics.isInconclusive = true", e "summary" deixando explícito que o teste não é diagnóstico de prompt; recomende reexecutar após investigar infra. Não invente conclusões sobre o prompt. Sessão inconclusiva NUNCA reprova.
 
 # REGRA CINCO — ALUCINAÇÃO SÓ COM EVIDÊNCIA ESPECÍFICA
 
@@ -472,7 +472,7 @@ Use estes limites para preencher "responseTimeAnalysis.verdict" e o "assessment"
 
 REGRAS OBRIGATÓRIAS sobre tempo:
 - Tempo dentro de RÁPIDO ou ACEITÁVEL **NÃO é problema**. Não desconte pontos do overallScore por isso. Não escreva "agente demorou", "respostas lentas", "experiência prejudicada por demora" no summary se o verdict de tempo for RÁPIDO ou ACEITÁVEL.
-- Só desconte pontos se o verdict for LENTO ou INACEITÁVEL — e mesmo assim, no máximo -0.5 ponto pra LENTO e -1.0 pra INACEITÁVEL. Tempo nunca pode ser o motivo principal e isolado de NECESSITA AJUSTES.
+- Só desconte pontos se o verdict for LENTO ou INACEITÁVEL — e mesmo assim, no máximo -0.5 ponto pra LENTO e -1.0 pra INACEITÁVEL. Tempo nunca pode ser o motivo principal e isolado de REPROVADO.
 - Não cite tempo em "improvements", "weaknesses" ou "issues" se o verdict for RÁPIDO/ACEITÁVEL.
 
 # REGRA DEZ — ESTRATIFICAÇÃO DE LITERALIDADE EM RESPOSTAS DETERMINÍSTICAS
@@ -581,7 +581,7 @@ Retorne UM ÚNICO objeto JSON válido com a estrutura abaixo. Campos de lista po
 
 {
   "overallScore": 0.0,
-  "verdict": "APROVADO | REPROVADO | NECESSITA AJUSTES",
+  "verdict": "APROVADO | REPROVADO",
   "summary": "3-4 frases frias e descritivas. O que o agente fez, o que não fez, com proporção. Sem hipérbole.",
   "sessionDiagnostics": {
     "isInconclusive": false,
@@ -737,17 +737,20 @@ Retorne UM ÚNICO objeto JSON válido com a estrutura abaixo. Campos de lista po
 
 REGRA DE CALIBRAÇÃO: agentes que cumprem o fluxo principal, não alucinam dados específicos e respondem no tom certo MERECEM 7-8, mesmo com imperfeições menores. Não puna pequenos deslizes com nota baixa.
 
-# VEREDITO — MAPEAMENTO RIGOROSO
+# VEREDITO — MAPEAMENTO BINÁRIO (APROVADO ou REPROVADO)
 
-1. **APROVADO**: overallScore >= 7.0 E sem falha grave evidenciada.
+Esta avaliação tem APENAS dois vereditos possíveis: **APROVADO** ou **REPROVADO**. NÃO USE "NECESSITA AJUSTES" — esse valor está deprecated e é proibido.
 
-2. **NECESSITA AJUSTES** (default em caso de dúvida): overallScore entre 4.0 e 6.99, OU overallScore < 4.0 sem falha grave concreta da lista, OU sessão inconclusiva (timeouts ≥50%).
-
-3. **REPROVADO**: REQUER AS DUAS CONDIÇÕES JUNTAS:
+1. **REPROVADO**: REQUER AS DUAS CONDIÇÕES JUNTAS:
    (a) overallScore < 4.0 E
-   (b) pelo menos UMA falha grave concreta da lista abaixo, com citação de mensagem.
+   (b) pelo menos UMA falha grave concreta da lista abaixo, com citação de mensagem do transcript.
 
-   Sem (b), o teto é NECESSITA AJUSTES.
+2. **APROVADO**: TODO O RESTO. Inclui:
+   - overallScore >= 4.0 (mesmo com imperfeições — use "improvements" e "weaknesses" pra apontar o que melhorar).
+   - overallScore < 4.0 sem falha grave concreta da lista.
+   - Sessão inconclusiva (timeouts ≥50%): aprove com nota intermediária e marque sessionDiagnostics.isInconclusive = true; deixe claro no summary que o teste não é diagnóstico.
+
+A intenção é binária: o agente PODE entrar em produção (APROVADO) ou NÃO PODE (REPROVADO). Áreas de melhoria não viram veredito — viram itens em "improvements" e "weaknesses".
 
 LISTA DE FALHAS GRAVES (apenas com evidência clara no transcript):
 - Alucinação GRAVE recorrente: dado específico inventado em MAIS DE UMA mensagem.
@@ -769,6 +772,7 @@ Antes de finalizar o JSON, releia sua análise e confirme:
 - [ ] Não escrevi "violou post_handoff_protocol", "continuou após handoff" ou variantes (Regra OITO). Padrões repetitivos viram "loop repetitivo de mensagens sem progressão".
 - [ ] Para respostas determinísticas, apliquei a Regra DEZ: cobrei literal SÓ em blocos críticos de compliance; paráfrase em saudação/cortesia/transição não virou violação.
 - [ ] Para blocos críticos de compliance, varri o detector da Regra ONZE (talvez, em geral, por enquanto, depende, etc.) e listei como violação grave quando aparecem.
+- [ ] verdict é APROVADO ou REPROVADO (binário). NÃO usei "NECESSITA AJUSTES" em hipótese alguma.
 - [ ] Não usei score/dados da persona como ground truth do negócio.
 - [ ] Não atribuí causa específica para timeouts.
 - [ ] Listas (issues, instances, weaknesses) só contêm itens com evidência ancorada.
@@ -794,17 +798,21 @@ Se algum item falhou, revise antes de retornar.`,
   report.responseTimeAnalysis.medianMs = medianTime;
   report.responseTimeAnalysis.timeouts = timeoutCount;
 
-  // Guard rail server-side: se a sessão é dominada por timeouts e o report
-  // ainda assim marcou REPROVADO, downgrada para NECESSITA AJUSTES.
-  // Timeouts são inconclusivos para diagnóstico de prompt.
+  // Guard rail 1: sessão dominada por timeouts é inconclusiva — nunca reprova.
   if (sessionIsInfraFailure && report.verdict === 'REPROVADO') {
-    report.verdict = 'NECESSITA AJUSTES';
+    report.verdict = 'APROVADO';
     report.sessionDiagnostics = report.sessionDiagnostics || {};
     report.sessionDiagnostics.isInconclusive = true;
     report.sessionDiagnostics.reason =
       `Sessão com ${timeoutCount}/${totalAgentTurns} timeouts (${(timeoutRatio * 100).toFixed(0)}%). ` +
-      `Diagnóstico de prompt fica inconclusivo nesta condição. Veredito ajustado para NECESSITA AJUSTES. ` +
+      `Diagnóstico de prompt fica inconclusivo nesta condição. Veredito ajustado para APROVADO (não-diagnóstico). ` +
       `Recomenda-se investigar infra/integração antes de re-rodar.`;
+  }
+
+  // Guard rail 2: vereditos legados ou inválidos viram APROVADO/REPROVADO binário.
+  // "NECESSITA AJUSTES" não existe mais.
+  if (report.verdict && report.verdict !== 'APROVADO' && report.verdict !== 'REPROVADO') {
+    report.verdict = 'APROVADO';
   }
 
   return report;

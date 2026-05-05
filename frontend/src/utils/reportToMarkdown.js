@@ -1,24 +1,17 @@
 function productionLine(report) {
-  const score = typeof report.overallScore === 'number' ? report.overallScore : parseFloat(report.overallScore);
   const v = (report.verdict || '').toUpperCase();
-  if (v === 'APROVADO' || score >= 7) {
-    return {
-      status: 'SIM',
-      label: 'Pode usar em producao',
-      detail: 'Agente cumpre seu papel com qualidade suficiente para atender clientes reais.',
-    };
-  }
-  if (v === 'REPROVADO' || score < 5) {
+  if (v === 'REPROVADO') {
     return {
       status: 'NAO',
       label: 'Nao recomendado para producao',
       detail: 'Falhas graves comprometem a experiencia — corrija os problemas criticos antes de liberar.',
     };
   }
+  // Default APROVADO (também cobre vereditos legados)
   return {
-    status: 'COM RESSALVAS',
-    label: 'Usar em producao somente apos ajustes',
-    detail: 'Funciona em parte, mas tem problemas que um cliente real perceberia. Aplique as melhorias sugeridas antes.',
+    status: 'SIM',
+    label: 'Pode usar em producao',
+    detail: 'Agente cumpre seu papel sem falhas graves. Veja "Melhorias Sugeridas" para refinamentos opcionais.',
   };
 }
 
