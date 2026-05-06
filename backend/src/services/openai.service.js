@@ -393,7 +393,7 @@ Diretrizes obrigatórias sobre timeouts:
 - Timeout = ausência de resposta do agente dentro do tempo limite. Pode ter causas múltiplas: infra, parsing, modelo travado, rate limit, integração externa, prompt complexo. Você NÃO consegue distinguir.
 - **Não atribua timeout a "prompt complexo demais" ou "instruções conflitantes" sem evidência textual no transcript.** Especular causa de timeout é fora do seu escopo.
 - Reporte o número de timeouts em "responseTimeAnalysis". Não use timeout como evidência de falha de prompt em "hallucinationDetection", "flowAdherence" ou "promptAnalysis".
-- Se ${sessionIsInfraFailure ? "TRUE" : "FALSE"} (sessão dominada por timeouts: ≥50% dos turnos): trate o transcript como **inconclusivo**. Veredito = APROVADO com nota neutra (6.0-6.5), "sessionDiagnostics.isInconclusive = true", e "summary" deixando explícito que o teste não é diagnóstico de prompt; recomende reexecutar após investigar infra. Não invente conclusões sobre o prompt. Sessão inconclusiva NUNCA reprova.
+- Se ${sessionIsInfraFailure ? "TRUE" : "FALSE"} (sessão dominada por timeouts: ≥50% dos turnos): trate o transcript como **inconclusivo**. Marque "sessionDiagnostics.isInconclusive = true" e deixe explícito no "summary" que o teste não é diagnóstico de prompt; recomende reexecutar após investigar infra. **Atribua a nota com base apenas no que conseguiu observar** (mensagens reais do agente) — o backend RECALCULA a nota proporcional automaticamente baseada na razão de turnos observáveis (mais turnos observáveis = nota maior, capped em 6.9). Não tente forçar uma faixa específica. Sessão inconclusiva NUNCA reprova.
 
 # REGRA CINCO — ALUCINAÇÃO SÓ COM EVIDÊNCIA ESPECÍFICA
 
@@ -810,17 +810,23 @@ Se algum item falhou, revise antes de retornar.`,
   report.responseTimeAnalysis.timeouts = timeoutCount;
 
   // Guard rail 1: sessão dominada por timeouts é inconclusiva — nunca reprova.
+  // Nota é recalculada proporcionalmente à razão de turnos observáveis:
+  //   nota = 6.0 + (observableRatio * 1.5), capped em 6.9.
+  // Exemplo: 1/8 turnos observados → 6.19; 4/8 → 6.75; 0/8 → 6.0.
+  // Garante que sessões com pelo menos algum dado observável tenham nota maior que sessões totalmente silenciosas.
   if (sessionIsInfraFailure) {
+    const observedTurns = totalAgentTurns - timeoutCount;
+    const observableRatio = totalAgentTurns > 0 ? observedTurns / totalAgentTurns : 0;
+    const proportionalScore = Math.min(6.9, 6.0 + observableRatio * 1.5);
+
     report.sessionDiagnostics = report.sessionDiagnostics || {};
     report.sessionDiagnostics.isInconclusive = true;
     report.sessionDiagnostics.reason =
       `Sessão com ${timeoutCount}/${totalAgentTurns} timeouts (${(timeoutRatio * 100).toFixed(0)}%). ` +
-      `Diagnóstico de prompt fica inconclusivo nesta condição. Veredito forçado para APROVADO (não-diagnóstico). ` +
+      `Diagnóstico de prompt fica inconclusivo. Nota recalculada proporcional ao observável: ` +
+      `${observedTurns}/${totalAgentTurns} turnos observados → ${proportionalScore.toFixed(2)}. ` +
       `Recomenda-se investigar infra/integração antes de re-rodar.`;
-    // Se nota foi <6, eleva pra 6.0 só pra coerência com o veredito de inconclusiva
-    if (typeof report.overallScore === 'number' && report.overallScore < 6) {
-      report.overallScore = 6.0;
-    }
+    report.overallScore = parseFloat(proportionalScore.toFixed(2));
     report.verdict = 'APROVADO';
     return report;
   }
