@@ -311,8 +311,56 @@ export async function generateReport(apiKey, agentPrompt, persona, conversationH
   const sortedTimes = [...responseTimes].sort((a, b) => a - b);
   const medianTime = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length / 2)] : 0;
 
-  const timeoutCount = conversationHistory.filter((msg) => msg.role === 'agent' && msg.timeout).length;
-  const totalAgentTurns = conversationHistory.filter((msg) => msg.role === 'agent').length;
+  const allTimeouts = conversationHistory.filter((msg) => msg.role === 'agent' && msg.timeout).length;
+  const totalAgentTurnsRaw = conversationHistory.filter((msg) => msg.role === 'agent').length;
+
+  // Detecção de silêncios INTENCIONAIS após handoff. Após o agente sinalizar
+  // que passou pra equipe humana, não responder é o COMPORTAMENTO CORRETO
+  // (post_handoff_protocol). Esses "timeouts" não são falha — não devem
+  // contar pra ratio de inconclusiva nem pra nota.
+  const HANDOFF_PHRASES = [
+    'vou te direcionar',
+    'vou direcionar',
+    'vou pedir pro time',
+    'vou pedir pro pessoal',
+    'vou pedir pra equipe',
+    'o time entra em contato',
+    'o time já recebe',
+    'time já vai falar',
+    'time vai falar',
+    'time entra em contato em breve',
+    'passei pra equipe',
+    'passei pro time',
+    'já te direcionei',
+    'já passei pra equipe',
+    'já passei pro time',
+    'time já tá com',
+    'time já está com',
+  ];
+
+  function lastAgentTextBefore(idx) {
+    for (let i = idx - 1; i >= 0; i--) {
+      const m = conversationHistory[i];
+      if (m.role === 'agent' && !m.timeout && m.content) {
+        return m.content.toLowerCase();
+      }
+    }
+    return null;
+  }
+
+  let intentionalSilences = 0;
+  conversationHistory.forEach((msg, i) => {
+    if (msg.role === 'agent' && msg.timeout) {
+      const prev = lastAgentTextBefore(i);
+      if (prev && HANDOFF_PHRASES.some((p) => prev.includes(p))) {
+        intentionalSilences++;
+      }
+    }
+  });
+
+  // Métricas EFETIVAS (descontando silêncios pós-handoff)
+  const timeoutCount = allTimeouts - intentionalSilences;
+  const totalAgentTurns = totalAgentTurnsRaw - intentionalSilences;
   const timeoutRatio = totalAgentTurns > 0 ? timeoutCount / totalAgentTurns : 0;
   const sessionIsInfraFailure = totalAgentTurns > 0 && timeoutRatio >= 0.5;
 
@@ -548,9 +596,12 @@ ${JSON.stringify(persona, null, 2)}
 - Mínimo: ${(minTime / 1000).toFixed(1)}s
 - Máximo: ${(maxTime / 1000).toFixed(1)}s
 - Mediana: ${(medianTime / 1000).toFixed(1)}s
-- Timeouts: ${timeoutCount} de ${totalAgentTurns} turnos (${(timeoutRatio * 100).toFixed(0)}%)
-- Sessão dominada por timeouts (≥50%): ${sessionIsInfraFailure ? "SIM — tratar como inconclusiva" : "Não"}
+- Timeouts efetivos (não-intencionais): ${timeoutCount} de ${totalAgentTurns} turnos efetivos (${(timeoutRatio * 100).toFixed(0)}%)
+- Silêncios intencionais pós-handoff (não contam como timeout): ${intentionalSilences}
+- Sessão dominada por timeouts (≥50% efetivos): ${sessionIsInfraFailure ? "SIM — tratar como inconclusiva" : "Não"}
 ===== FIM DAS ESTATÍSTICAS =====
+
+NOTA SOBRE SILÊNCIOS PÓS-HANDOFF: ${intentionalSilences} dos turnos do agente foram silêncios após o agente sinalizar handoff. Pelo post_handoff_protocol, ficar em silêncio depois de "vou te direcionar pro time" é o comportamento CORRETO — esses turnos NÃO são timeouts no sentido de falha. Eles foram excluídos das contagens acima e não devem ser tratados como problema.
 
 # METODOLOGIA OBRIGATÓRIA — SIGA NESTA ORDEM
 
@@ -807,7 +858,9 @@ Se algum item falhou, revise antes de retornar.`,
   report.responseTimeAnalysis.minMs = minTime;
   report.responseTimeAnalysis.maxMs = maxTime;
   report.responseTimeAnalysis.medianMs = medianTime;
-  report.responseTimeAnalysis.timeouts = timeoutCount;
+  report.responseTimeAnalysis.timeouts = timeoutCount; // efetivos (sem silêncios pós-handoff)
+  report.responseTimeAnalysis.intentionalSilences = intentionalSilences;
+  report.responseTimeAnalysis.totalAgentTurnsRaw = totalAgentTurnsRaw;
 
   // Guard rail 1: sessão dominada por timeouts é inconclusiva — nunca reprova.
   // Nota é recalculada proporcionalmente à razão de turnos observáveis:
