@@ -13,6 +13,7 @@ const initialForm = {
 const PROJECT_OPTIONS = [
   { value: '', label: 'Sem limpeza (não apaga nada do agente)' },
   { value: 'seu-elias', label: 'Seu Elias' },
+  { value: 'roberth', label: 'Roberth' },
 ];
 
 export default function TestForm({ onStart, disabled }) {

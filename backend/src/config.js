@@ -17,6 +17,11 @@ export const PROJECTS = {
     supabaseUrl: process.env.SEU_ELIAS_SUPABASE_URL,
     supabaseKey: process.env.SEU_ELIAS_SUPABASE_KEY,
   },
+  'roberth': {
+    label: 'Roberth',
+    supabaseUrl: process.env.ROBERTH_SUPABASE_URL,
+    supabaseKey: process.env.ROBERTH_SUPABASE_KEY,
+  },
 };
 
 let _webhookUrl = config.webhookBaseUrl;

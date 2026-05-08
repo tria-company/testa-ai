@@ -40,7 +40,7 @@ export const swaggerSpec = {
           openaiApiKey: { type: 'string', example: 'sk-xxx', description: 'API Key da OpenAI' },
           project: {
             type: 'string',
-            enum: ['seu-elias'],
+            enum: ['seu-elias', 'roberth'],
             nullable: true,
             description: 'Projeto cliente. Se preenchido, ao finalizar o teste o sistema apaga o lead/threads do testador no Supabase do projeto. Vazio = sem limpeza.',
             example: 'seu-elias',
