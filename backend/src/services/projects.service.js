@@ -48,6 +48,10 @@ export async function cleanupTestLead(projectKey, testerPhone) {
     return cleanupRoberth(client, variants, testerPhone);
   }
 
+  if (projectKey === 'romero') {
+    return cleanupRomero(client, variants, testerPhone);
+  }
+
   return cleanupSeuElias(client, variants, testerPhone, projectKey);
 }
 
@@ -120,4 +124,24 @@ async function cleanupRoberth(client, variants, testerPhone) {
   const count = deleted?.length || 0;
   console.log(`[ProjectCleanup] Apagadas ${count} conversa(s) do(s) customer(s) [${customerIds.join(', ')}] no projeto "roberth".`);
   return { leadsFound: customerIds.length, threadsDeleted: count };
+}
+
+// Schema do Romero: ai_romero_triagem tem telefone direto + thread_id + users_id (FK users_romero).
+// Apaga as linhas de triagem do testador (uma por thread), preservando o registro em users_romero —
+// espelha o comportamento dos outros projetos (preserva user, limpa histórico).
+async function cleanupRomero(client, variants, testerPhone) {
+  const { data: deleted, error: delErr } = await client
+    .from('ai_romero_triagem')
+    .delete()
+    .in('telefone', variants)
+    .select('id');
+
+  if (delErr) {
+    console.error(`[ProjectCleanup] Erro ao apagar ai_romero_triagem para ${testerPhone}:`, delErr.message);
+    return { error: delErr };
+  }
+
+  const count = deleted?.length || 0;
+  console.log(`[ProjectCleanup] Apagadas ${count} triagem(s) no projeto "romero" para telefone ${testerPhone}.`);
+  return { leadsFound: count, threadsDeleted: count };
 }

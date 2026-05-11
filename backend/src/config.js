@@ -22,6 +22,11 @@ export const PROJECTS = {
     supabaseUrl: process.env.ROBERTH_SUPABASE_URL,
     supabaseKey: process.env.ROBERTH_SUPABASE_KEY,
   },
+  'romero': {
+    label: 'Romero',
+    supabaseUrl: process.env.ROMERO_SUPABASE_URL,
+    supabaseKey: process.env.ROMERO_SUPABASE_KEY,
+  },
 };
 
 let _webhookUrl = config.webhookBaseUrl;
